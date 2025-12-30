@@ -1,0 +1,30 @@
+{
+  "Midnight (Dark)": {
+    "template": "plotly_dark",
+    "background_color": "#0E1117",
+    "colors": [
+      "#E60049", "#0BB4FF", "#50E991", "#E6D800", "#9B19F5", "#FFA300", "#DC0AB4", "#B3D4FF", "#00BFA0"
+    ]
+  },
+  "Standard (Light)": {
+    "template": "plotly",
+    "background_color": "#FFFFFF",
+    "colors": [
+      "#636EFA", "#EF553B", "#00CC96", "#AB63FA", "#FFA15A", "#19D3F3", "#FF6692", "#B6E880", "#FF97FF", "#FECB52"
+    ]
+  },
+  "Grimdark (CRT)": {
+    "template": "plotly_dark",
+    "background_color": "#000000",
+    "colors": [
+      "#00FF00", "#32CD32", "#FFFF00", "#FFA500", "#008000", "#B22222"
+    ]
+  },
+  "Scientific": {
+    "template": "ggplot2",
+    "background_color": "#FFFFFF",
+    "colors": [
+      "#3366CC", "#DC3912", "#FF9900", "#109618", "#990099", "#0099C6", "#DD4477", "#66AA00", "#B82E2E", "#316395"
+    ]
+  }
+}

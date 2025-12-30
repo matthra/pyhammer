@@ -1,63 +1,118 @@
-# PyHammer ⚡🔨
+⚡ PyHammer
+The Advanced Mathhammer Analysis Suite
 
-> *A python math hammer project for calculating probabilities in the grim darkness of the far future.*
+PyHammer is a local web application designed to be the "post-game analysis" for your Warhammer 40k list building. It doesn't tell you what to take—it tells you how well it works.
 
-**PyHammer** is an open-source, deterministic Mathhammer engine for Warhammer 40k. It calculates **Cost Per Kill (CPK)** efficiency, accounting for complex rules like Sustained Hits, Lethal Hits, and Damage Wastage (Overkill).
+By auditing your roster against standard defensive profiles (MEQ, TEQ, Vehicles, Knights), PyHammer exposes your list's efficiency gaps, threat ranges, and single points of failure before you ever put models on the table.
 
-Designed for:
-1.  **Players:** A local, privacy-focused Streamlit app.
-2.  **AI Agents:** An MCP Server to give Claude/Cursor perfect math skills.
+🚀 Key Features
+Roster Manager: Import/Export CSV lists. Manage unit profiles with an abstraction layer focused on output, not just points.
 
----
+Deep Efficiency Metrics:
 
-## 🚀 Usage
+CPK (Cost Per Kill): Are you paying too much to kill a Guard squad?
 
-### Option 1: The App (For Players)
-Run the calculator locally on your machine. No internet required, no data tracking.
+TTK (Time To Kill): How many activations does it actually take to drop a Knight?
 
-1.  Install requirements:
-    ```bash
-    pip install streamlit pandas
-    ```
+Interactive Visualizations (Plotly):
 
-2.  Run the app:
-    ```bash
-    streamlit run app.py
-    ```
+Threat Matrix: Bubble chart comparing Range vs. Strength vs. Volume of Fire.
 
-3.  The calculator will open in your browser automatically.
+Efficiency Curves: "Guitar String" charts showing how unit performance degrades as targets get tougher.
 
-### Option 2: The AI Skill (MCP)
-Give Claude (or any MCP-compliant AI) a calculator watch. Stop the hallucinations.
+Army Output: Stacked analysis of your total damage potential per phase.
 
-1.  Install the MCP SDK:
-    ```bash
-    pip install mcp
-    ```
+Theming Engine: Switch between "Midnight", "Grimdark (CRT)", and "Scientific" modes via themes.json.
 
-2.  Add this to your `claude_desktop_config.json`:
-    * **Mac:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-    * **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+AI Ready: Includes an MCP Server (mcp_server.py) to let AI agents (like Claude or ChatGPT) run calculations on your roster.
 
-    ```json
-    "pyhammer": {
-      "command": "python",
-      "args": ["/ABSOLUTE/PATH/TO/mcp_server.py"]
-    }
-    ```
+🛠️ Installation
+PyHammer is a Python application built on Streamlit.
 
-3.  Restart Claude. You can now drag your list CSV into the chat and ask:
-    > *"Analyze my roster efficiency against Custodes."*
+Prerequisites
+Python 3.10 or higher.
 
----
+Quick Start
+Clone the repository:
 
-## 📜 License: AGPLv3
+Bash
 
-This project is licensed under the **GNU Affero General Public License v3 (AGPLv3)**.
+git clone https://github.com/yourusername/pyhammer.git
+cd pyhammer
+Install dependencies:
 
-**What this means:**
-* ✅ **You may:** Use this tool for free. Fork it. Modify it.
-* ✅ **You may:** Use it commercially (e.g., on an ad-supported website).
-* ⚠️ **BUT:** If you host this software for users to interact with over a network (like a website), you **MUST** provide the full source code to your users.
+Bash
 
-*If you profit from the machine spirit, you must share your schematics.*
+pip install -r requirements.txt
+Run the App:
+
+Bash
+
+streamlit run app.py
+This will automatically open the dashboard in your default web browser (usually http://localhost:8501).
+
+📊 How to Use
+Roster Manager Tab:
+
+Add units manually or import a CSV.
+
+Tip: Use the "Loadout Group" column to split units with mixed weapons (e.g., "Crisis Team [Plasma]" vs "Crisis Team [Missiles]").
+
+For Melee weapons, enter M or 0 in the Range column.
+
+Analysis Tabs:
+
+Efficiency (CPK): Look for Green cells (< 2.0). These are your efficient traders.
+
+Time To Kill: Look for values > 1.0. If a unit takes 1.2 activations to kill a tank, you effectively need two units to ensure the kill.
+
+Interactive Charts:
+
+Hover over any data point to see specific unit details.
+
+Use the Theme Selector to switch visual styles.
+
+🎨 Customization
+Creating Custom Themes
+You can add your own faction colors (e.g., Ultramarine Blue, Necron Green) by editing src/visualizations/themes.json.
+
+JSON
+
+"My Custom Faction": {
+  "template": "plotly_dark",
+  "background_color": "#0E1117",
+  "colors": ["#YOUR_HEX_CODE_1", "#YOUR_HEX_CODE_2", "..."]
+}
+The app will automatically detect new themes upon restart.
+
+Modifying Targets
+Want to test against a specific enemy unit? Edit src/data/targets.py. You can add custom profiles (e.g., "Mortarion", "Avatar") to the TARGETS dictionary.
+
+🤖 AI Integration (MCP)
+PyHammer includes a Model Context Protocol (MCP) server, allowing AI assistants to "talk" to your math engine.
+
+To run the MCP Server:
+
+Bash
+
+python mcp_server.py
+This allows compatible AI clients to query your roster's efficiency and receive direct links to specific charts in the dashboard.
+
+📂 Project Structure
+Plaintext
+
+pyhammer/
+├── app.py                   # Main UI Controller (Streamlit)
+├── mcp_server.py            # AI Integration Server
+├── requirements.txt         # Dependencies
+├── roster.csv               # Default/Saved Roster
+└── src/                     # Source Code
+    ├── data/                # Target Profiles (MEQ, TEQ, etc.)
+    ├── engine/              # Core Mathhammer Logic (Probabilities)
+    └── visualizations/      # Plotly Charts & Theme Logic
+        ├── charts.py        # Chart definitions
+        ├── theme_utils.py   # JSON loaders
+        └── themes.json      # Color configurations
+
+⚠️ Disclaimer
+PyHammer is an unofficial fan tool. All Warhammer 40,000 terminology is © Games Workshop Limited. This tool is for statistical analysis only and is not a substitute for the official rules or codexes.
