@@ -1,0 +1,5 @@
+streamlit
+pandas
+matplotlib
+mcp>=1.0.0
+plotly
