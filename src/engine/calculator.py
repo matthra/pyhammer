@@ -1,142 +1,248 @@
-# src/engine/calculator.py
-from .math_core import parse_dice, get_crit_prob, get_hit_prob, calculate_capped_damage
+import numpy as np
+import pandas as pd
+import re
 
-def resolve_weapon_profile(weapon, defender):
-    """
-    Calculates the raw output of a SINGLE weapon profile.
-    Handles Hit -> Wound -> Save -> FNP -> Damage Wastage.
-    """
-    # 1. Parse Keywords
-    sus_val = int(weapon.get('Sustained', 0) or 0)
-    is_lethal = str(weapon.get('Lethal', 'N')).upper() == 'Y'
-    is_dev = str(weapon.get('Dev', 'N')).upper() == 'Y'
-    crit_h = int(weapon.get('CritHit', 6) or 6)
-    crit_w = int(weapon.get('CritWound', 6) or 6)
+# --- HELPER FUNCTIONS (Kept your existing parsing logic) ---
 
-    # 2. Hit Sequence
-    bs = int(str(weapon['BS']).replace('+', ''))
-    rr_h = str(weapon.get('RR_H', 'N')).upper()
-    
-    p_hit_total = get_hit_prob(bs, rr_h)
-    actual_crit_h = max(crit_h, bs)
-    p_crit_h = get_crit_prob(actual_crit_h, rr_h)
-    p_hit_norm = max(0, p_hit_total - p_crit_h)
+def safe_int(val, default=0):
+    try:
+        if pd.isna(val) or val == '': return default
+        s_val = str(val)
+        match = re.search(r'-?\d+', s_val)
+        if match: return int(match.group())
+        return default
+    except (ValueError, TypeError):
+        return default
 
-    # Hit Triggers
-    attacks = int(weapon['A'])
-    bonus_hits = attacks * p_crit_h * sus_val
-    auto_wounds = attacks * p_crit_h if is_lethal else 0
-    hits_to_wound = (attacks * p_hit_norm) + (0 if is_lethal else attacks * p_crit_h) + bonus_hits
-
-    # 3. Wound Sequence
-    s, t = int(weapon['S']), int(defender['T'])
-    if s >= 2*t: req=2
-    elif s > t: req=3
-    elif s == t: req=4
-    elif s <= t/2: req=6
-    else: req=5
-    
-    req = min(req, crit_w) # Anti-X override
-    rr_w = str(weapon.get('RR_W', 'N')).upper()
-    
-    p_w_raw = (7 - req) / 6.0
-    if rr_w == '1': p_w_total = p_w_raw + (1/6.0 * p_w_raw)
-    elif rr_w == 'F': p_w_total = p_w_raw + ((1 - p_w_raw) * p_w_raw)
-    else: p_w_total = p_w_raw
-    
-    p_crit_w = get_crit_prob(crit_w, rr_w)
-    p_w_norm = max(0, p_w_total - p_crit_w)
-
-    # 4. Save Sequence
-    sv = int(str(defender['Sv']).replace('+', ''))
-    ap = abs(int(weapon['AP']))
-    inv = int(str(defender['Inv']).replace('+', '')) if defender['Inv'] else 99
-    
-    save_roll = min(sv + ap, inv)
-    p_fail = 1.0 if save_roll > 6 else 1.0 - ((7 - save_roll)/6.0)
-
-    # 5. Damage Sequence
-    succ_norm_w = hits_to_wound * p_w_norm
-    succ_crit_w = hits_to_wound * p_crit_w
-    
-    mortals = succ_crit_w if is_dev else 0
-    saves_to_roll = succ_norm_w + auto_wounds + (0 if is_dev else succ_crit_w)
-    
-    unsaved = saves_to_roll * p_fail
-    
-    # --- FNP (FEEL NO PAIN) LOGIC ---
-    fnp_str = str(defender.get('FNP', '')).replace('+', '')
-    if fnp_str and fnp_str.isdigit():
-        fnp_val = int(fnp_str)
-        p_fail_fnp = (fnp_val - 1) / 6.0
-    else:
-        p_fail_fnp = 1.0 # 100% chance to take damage (no FNP)
-    
-    # Effective Wounds logic handles FNP + Wastage interaction best for averages
-    raw_wounds = int(defender['W'])
-    effective_wounds = raw_wounds / p_fail_fnp
-    
-    # Total Damage Events (Failed Saves + Mortals)
-    # Note: Mortals also get FNP (usually), unless specified otherwise. Assuming standard FNP.
-    total_dmg_events = unsaved + mortals
-    
-    # Calculate Average Damage per Event (Capped by Effective Wounds)
-    dmg_prof = parse_dice(weapon['D'])
-    avg_dmg = calculate_capped_damage(dmg_prof, effective_wounds)
-    
-    total_damage_dealt = total_dmg_events * avg_dmg
-    dead_models = total_damage_dealt / effective_wounds
-    
-    return {
-        'dead_models': dead_models
-    }
-
-def calculate_group_metrics(roster_df, defender_profile):
-    """
-    Aggregation Engine:
-    1. Group rows by 'Name' and 'Loadout Group'.
-    2. Sum the dead models.
-    3. Cap at Unit Size.
-    """
-    metrics = []
-    
-    # Ensure Loadout Group exists
-    if 'Loadout Group' not in roster_df.columns:
-        roster_df['Loadout Group'] = 'Default'
-    
-    # Fill NaN
-    roster_df['Loadout Group'] = roster_df['Loadout Group'].fillna('Default')
-
-    grouped = roster_df.groupby(['Name', 'Loadout Group'])
-    
-    for (unit_name, group_name), group_df in grouped:
-        
-        total_dead = 0
-        total_pts = group_df['Pts'].iloc[0] # Assume points match across group
-        
-        for _, row in group_df.iterrows():
-            res = resolve_weapon_profile(row, defender_profile)
-            total_dead += res['dead_models']
-            
-        # --- UNIT SIZE CAP ---
-        unit_cap = defender_profile.get('UnitSize', 99)
-        final_kills = min(total_dead, unit_cap)
-        
-        # Metrics
-        if final_kills > 0:
-            cpk = total_pts / (final_kills * defender_profile['Pts'])
-            ttk = 1.0 / final_kills
+def parse_d6_value(val):
+    if pd.isna(val) or val == '': return 0.0
+    val = str(val).upper().strip()
+    if 'D' not in val:
+        try: return float(val)
+        except ValueError: return 0.0
+    try:
+        if '+' in val:
+            parts = val.split('+')
+            dice_part = parts[0]
+            flat_part = float(parts[1])
         else:
-            cpk = 99.9
-            ttk = 99.9
-            
-        metrics.append({
-            'Unit': unit_name,
-            'Group': group_name,
-            'Target': defender_profile['Name'],
-            'CPK': round(cpk, 2),
-            'Kills': round(final_kills, 2),
-            'TTK': round(ttk, 2)
-        })
+            dice_part = val
+            flat_part = 0.0
         
-    return metrics
+        if dice_part == 'D6': num_dice = 1
+        elif dice_part.endswith('D6'): num_dice = float(dice_part.replace('D6', ''))
+        else: num_dice = 0
+        return (num_dice * 3.5) + flat_part
+    except Exception:
+        return 0.0
+
+# --- CORE MATH ENGINE ---
+
+def resolve_single_row(row, defender):
+    """
+    Calculates damage for a single row (one weapon profile).
+    Returns a dict with 'dead_models' and 'total_damage'.
+    """
+    # 1. Parse Attacker Stats from the Series (row)
+    attacks = parse_d6_value(row.get('A', 0))
+    damage = parse_d6_value(row.get('D', 1))
+    bs = safe_int(row.get('BS', 4), default=4)
+    s = safe_int(row.get('S', 4), default=4)
+    ap = safe_int(row.get('AP', 0), default=0)
+    
+    sustained_val = safe_int(row.get('Sustained', 0))
+    lethal = str(row.get('Lethal', 'N')).upper() == 'Y'
+    dev = str(row.get('Dev', 'N')).upper() == 'Y'
+    crit_hit_thresh = safe_int(row.get('CritHit', 6), default=6)
+    crit_wound_thresh = safe_int(row.get('CritWound', 6), default=6)
+
+    # 2. Hit Phase
+    p_crit_hit = max(0, (7 - crit_hit_thresh) / 6.0)
+    p_hit_standard = max(0, (7 - bs) / 6.0)
+    
+    hits = attacks * p_hit_standard
+    auto_wounds = 0
+    
+    if lethal:
+        auto_wounds = attacks * p_crit_hit
+        hits = max(0, hits - auto_wounds)
+
+    if sustained_val > 0:
+        hits += (attacks * p_crit_hit * sustained_val)
+
+    # 3. Wound Phase
+    t = safe_int(defender.get('T', 4), default=4)
+    if s >= 2 * t: w_roll = 2
+    elif s > t:    w_roll = 3
+    elif s == t:   w_roll = 4
+    elif s > t/2:  w_roll = 5
+    else:          w_roll = 6
+    
+    p_wound_standard = (7 - w_roll) / 6.0
+    p_crit_wound = max(0, (7 - crit_wound_thresh) / 6.0)
+    p_wound_final = max(p_wound_standard, p_crit_wound)
+    
+    successful_wounds = hits * p_wound_final
+    
+    mortal_wounds = 0
+    if dev:
+        dev_procs = hits * p_crit_wound
+        mortal_wounds = dev_procs * damage
+        successful_wounds = max(0, successful_wounds - dev_procs)
+
+    successful_wounds += auto_wounds
+
+    # 4. Save Phase
+    sv = safe_int(defender.get('Sv'), default=7)
+    inv = safe_int(defender.get('Inv'), default=0)
+    
+    modified_sv = sv - ap
+    final_save = modified_sv
+    if inv > 0:
+        final_save = min(modified_sv, inv)
+        
+    if final_save > 6: p_fail = 1.0
+    else:
+        p_save = min((7 - final_save) / 6.0, 5/6.0)
+        p_fail = 1.0 - p_save
+        
+    damage_dealing_wounds = successful_wounds * p_fail
+
+    # 5. Damage Allocation
+    model_w = safe_int(defender.get('W', 1), default=1)
+    if model_w <= 0: model_w = 1
+
+    damage_per_shot = float(damage)
+    kill_efficiency_normal = min(1.0, damage_per_shot / model_w)
+    
+    dead_from_shots = damage_dealing_wounds * kill_efficiency_normal
+    dead_from_mortals = mortal_wounds / model_w
+    
+    total_dead = dead_from_shots + dead_from_mortals
+    total_raw_dmg = (damage_dealing_wounds * damage) + mortal_wounds
+    
+    return total_dead, total_raw_dmg
+
+# --- MAIN AGGREGATOR ---
+
+def calculate_group_metrics(df, target_profile, deduplicate=True):
+    """
+    Calculates metrics with "Profile ID" Optimization & Correct Point Scoring.
+    """
+    if df.empty:
+        return []
+
+    # --- 1. PRE-CALCULATE DAMAGE ---
+    temp_df = df.copy()
+    
+    # Sanitize
+    if 'Qty' not in temp_df.columns: temp_df['Qty'] = 1
+    temp_df['Qty'] = pd.to_numeric(temp_df['Qty'], errors='coerce').fillna(1)
+    
+    if 'Profile ID' not in temp_df.columns: temp_df['Profile ID'] = ''
+    temp_df['Profile ID'] = temp_df['Profile ID'].astype(str).replace('nan', '')
+
+    # Run Math
+    metrics = temp_df.apply(lambda row: resolve_single_row(row, target_profile), axis=1, result_type='expand')
+    temp_df['row_kills'] = metrics[0]
+    temp_df['row_damage'] = metrics[1]
+    
+    # --- 2. RESOLUTION PHASE (Optimization) ---
+    mask_exclusive = temp_df['Profile ID'] != ''
+    df_cumulative = temp_df[~mask_exclusive].copy()
+    df_exclusive = temp_df[mask_exclusive].copy()
+    
+    if not df_exclusive.empty:
+        # Sort by Kills (primary) then Damage (secondary)
+        df_exclusive = df_exclusive.sort_values(
+            by=['row_kills', 'row_damage'], 
+            ascending=[False, False]
+        )
+        # Identify Winners
+        winners = df_exclusive.drop_duplicates(subset=['Name', 'Pts', 'Profile ID'])
+        winning_keys = set(zip(winners['Name'], winners['Pts'], winners['Profile ID'], winners['Weapon']))
+        
+        # Filter
+        df_exclusive_resolved = df_exclusive[
+            df_exclusive.apply(lambda x: (x['Name'], x['Pts'], x['Profile ID'], x['Weapon']) in winning_keys, axis=1)
+        ]
+    else:
+        df_exclusive_resolved = pd.DataFrame()
+
+    # Recombine
+    work_df = pd.concat([df_cumulative, df_exclusive_resolved], ignore_index=True)
+
+    # --- 3. AGGREGATION PHASE (The Fix) ---
+
+    # Calculate Totals
+    # Note: We do NOT multiply Pts here yet. We handle points aggregation separately below.
+    if not deduplicate:
+        work_df['final_kills'] = work_df['row_kills'] * work_df['Qty']
+        work_df['final_damage'] = work_df['row_damage'] * work_df['Qty']
+    else:
+        work_df['final_kills'] = work_df['row_kills']
+        work_df['final_damage'] = work_df['row_damage']
+
+    # Deduplication (Table View)
+    if deduplicate:
+        subset_cols = ['Name', 'Weapon', 'A', 'BS', 'S', 'AP', 'D', 'Pts', 'Keywords', 'Loadout Group']
+        valid_subset = [c for c in subset_cols if c in work_df.columns]
+        work_df = work_df.drop_duplicates(subset=valid_subset)
+
+    # Grouping Config
+    group_cols = ['Name', 'Loadout Group']
+    if 'Qty' in work_df.columns and not deduplicate:
+         group_cols.append('Qty')
+    
+    valid_group_cols = [c for c in group_cols if c in work_df.columns]
+    
+    # --- POINTS AGGREGATION FIX ---
+    # We aggregate Pts using 'max' to avoid double-counting multi-profile units.
+    # e.g. Karnivore (Strike) 140pts + Karnivore (Sweep) 140pts -> MAX is 140pts.
+    
+    agg_funcs = {
+        'final_kills': 'sum', 
+        'final_damage': 'sum',
+        'Pts': 'max',  # <--- CRITICAL FIX: Take MAX cost of the rows in this unit
+        'Weapon': lambda x: ", ".join(sorted(set(
+            work_df.loc[x.index, 'Weapon'][work_df.loc[x.index, 'Profile ID'] != '']
+        )))
+    }
+    
+    grouped = work_df.groupby(valid_group_cols).agg(agg_funcs).reset_index()
+
+    results = []
+    target_pts = target_profile.get('Pts', 1)
+    target_size = target_profile.get('UnitSize', 10)
+
+    for _, row in grouped.iterrows():
+        # Cost Calculation
+        unit_cost = float(row['Pts'])
+        qty = row.get('Qty', 1) if not deduplicate else 1
+        
+        # Total Cost = Unit Cost * Qty
+        # (Since we used 'max' above, unit_cost is the cost of ONE model)
+        total_cost_basis = unit_cost * qty
+        
+        total_kills = row['final_kills']
+        total_dmg = row['final_damage']
+        active_modes = row['Weapon']
+        
+        kv_points = total_kills * target_pts
+        
+        # CPK = Total Points Spent / Total Points Killed
+        cpk = total_cost_basis / kv_points if kv_points > 0 else 999.0 
+        ttk = target_size / total_kills if total_kills > 0 else 999.0
+
+        results.append({
+            'Unit': row['Name'],
+            'Group': row.get('Loadout Group', 'Standard'),
+            'Qty': qty,
+            'CPK': cpk,
+            'Kills': total_kills,
+            'TTK': ttk,
+            'Damage': total_dmg,
+            'Mode': active_modes
+        })
+
+    return results
