@@ -5,8 +5,9 @@ import sys
 # 1. Force Python to look in the current directory for modules
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-from data.targets import TARGETS
-from engine.calculator import resolve_weapon_profile
+from src.data.targets import TARGETS
+from src.engine.calculator import resolve_weapon_profile
+from src.engine.grading import get_cpk_grade, get_grade_description
 
 # Define where your Streamlit app lives (Default is localhost:8501)
 APP_URL = "http://localhost:8501"
@@ -50,12 +51,17 @@ def calculate_efficiency(
             
         cpk = pts / (dead * defender['Pts'])
         ttk = 1.0 / dead
-        
+
+        # Get letter grade
+        grade = get_cpk_grade(cpk)
+        grade_desc = get_grade_description(grade)
+
         # 4. Return Formatted String with Link
         return (
             f"**VS {defender['Name']}**\n"
             f"- Dead Models: {dead:.2f}\n"
-            f"- CPK: {cpk:.2f} (Lower is better)\n"
+            f"- CPK: {cpk:.2f} ({grade}-tier)\n"
+            f"- Efficiency: {grade_desc}\n"
             f"- Est. Activations to Kill: {ttk:.2f}\n\n"
             f"📊 [View Charts & Full Analysis]({APP_URL})"
         )

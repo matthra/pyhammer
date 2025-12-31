@@ -12,16 +12,6 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 try:
     from src.data.targets import TARGETS
     from src.data.rosters import DEFAULT_ROSTER
-    from src.data.target_manager import (
-        get_available_target_lists,
-        load_target_list,
-        save_target_list,
-        delete_target_list,
-        get_target_list_metadata,
-        validate_target_profile,
-        import_targets_from_csv,
-        export_targets_to_csv
-    )
     from src.engine.calculator import calculate_group_metrics
     from src.engine.grading import get_cpk_grade, get_grade_color
     from src.visualizations.theme_utils import load_themes, get_unit_color_map
@@ -37,155 +27,46 @@ except ModuleNotFoundError as e:
 
 st.set_page_config(page_title="PyHammer 0.3.8", page_icon="⚡", layout="wide")
 
-# --- SIDEBAR: GLOBAL CONFIGURATION ---
+# --- SIDEBAR (Restored!) ---
 with st.sidebar:
-    st.title("⚡ PyHammer v0.3.9")
+    st.title("⚡ PyHammer v0.3.8")
     st.markdown("---")
-
-    # === TARGET LIST SELECTION ===
-    st.header("🎯 Target Profile")
-
-    # Initialize active target list in session state
-    if 'active_target_list' not in st.session_state:
-        st.session_state['active_target_list'] = 'default'
-
-    # Get available target lists
-    available_lists = get_available_target_lists()
-
-    # 1. SAFETY CHECK: Handle empty directory
-    if not available_lists:
-        st.error("CRITICAL ERROR: No target configuration files found in 'target_configs/'.")
-        st.stop()
-
-    # Target list dropdown logic
-    active_list_name = st.session_state['active_target_list']
-
-    # 2. SMART FALLBACK: If the current active list is missing or invalid
-    if active_list_name not in available_lists:
-        # Check if 'default' exists (or default.json)
-        if 'default' in available_lists:
-            active_list_name = 'default'
-        elif 'default.json' in available_lists:
-             active_list_name = 'default.json'
-        else:
-            # If neither exists, just grab the FIRST file found so the app doesn't crash
-            active_list_name = available_lists[0]
-            
-        # Save the valid name back to session state
-        st.session_state['active_target_list'] = active_list_name
-
-    # 3. BUILD DISPLAY NAMES (This was missing)
-    list_display_names = []
-    for list_name in available_lists:
-        try:
-            metadata = get_target_list_metadata(list_name)
-            list_display_names.append(metadata['name'])
-        except:
-            list_display_names.append(list_name)
-
-    # 4. GET INDEX (Now safe)
-    active_list_idx = available_lists.index(active_list_name)
-
-    # 5. RENDER DROPDOWN
-    selected_list_display = st.selectbox(
-        "Target List",
-        list_display_names,
-        index=active_list_idx,
-        key="target_list_selector"
-    )
-
-    # Update active list if changed
-    selected_list_name = available_lists[list_display_names.index(selected_list_display)]
-    if selected_list_name != st.session_state['active_target_list']:
-        st.session_state['active_target_list'] = selected_list_name
-
-    # Load targets from selected list
-    try:
-        target_list_data = load_target_list(selected_list_name)
-        ACTIVE_TARGETS = target_list_data['targets']
-    except:
-        # Fallback to default TARGETS
-        ACTIVE_TARGETS = TARGETS
-
-    # Enemy profile dropdown (from active list)
-    target_keys = list(ACTIVE_TARGETS.keys())
+    st.header("🎯 Analysis Focus")
+    
+    # Select a target for the "Army Summary" and Charts
+    target_keys = list(TARGETS.keys())
+    # Default to "Marine Equivalent" or first available
     default_idx = target_keys.index("Marine Equivalent") if "Marine Equivalent" in target_keys else 0
-    selected_target_key = st.selectbox("Enemy Profile", target_keys, index=default_idx, label_visibility="collapsed")
+    
+    col_target, col_cover = st.columns([3, 1])
+    with col_target:
+        selected_target_key = st.selectbox("Enemy Profile", target_keys, index=default_idx)
+    with col_cover:
+        st.markdown("<br>", unsafe_allow_html=True)  # Align with selectbox
+        assume_cover = st.checkbox("🪨 Assume Cover", value=False, help="Apply +1 to save rolls for all targets")
 
-    selected_target_stats = ACTIVE_TARGETS[selected_target_key].copy()
-
-    st.markdown("---")
-
-    # === GLOBAL MODIFIERS ===
-    st.header("⚙️ Global Settings")
-
-    # Cover Toggle
-    assume_cover = st.checkbox(
-        "🪨 Assume Cover",
-        value=False,
-        help="Apply +1 to armor save for all targets (simulates light cover/ruins)"
-    )
-
-    # Half Range Toggle
-    assume_half_range = st.checkbox(
-        "📏 Assume Half Range",
-        value=False,
-        help="Apply Melta and Rapid Fire bonuses globally (close combat engagement)"
-    )
+    selected_target_stats = TARGETS[selected_target_key].copy()
 
     # Apply cover bonus if enabled
     if assume_cover:
         current_save = selected_target_stats.get('Sv', '7+')
+        # Parse save value (e.g., "3+" → 3)
         try:
             save_val = int(current_save.replace('+', ''))
-            improved_save = max(2, save_val - 1)  # Cover: +1 save, min 2+
+            # Cover gives +1 to save (lower number is better)
+            improved_save = max(2, save_val - 1)  # Can't be better than 2+
             selected_target_stats['Sv'] = f'{improved_save}+'
         except:
-            pass
+            pass  # If parsing fails, leave unchanged
 
+    # Show Stats for context
+    c1, c2, c3 = st.columns(3)
+    c1.metric("T", selected_target_stats['T'])
+    c2.metric("Sv", f"{selected_target_stats['Sv']}", help="✅ Cover applied" if assume_cover else None)
+    c3.metric("W", selected_target_stats.get('W', 1))
+    
     st.markdown("---")
-
-    # === DATA IMPORT/EXPORT ===
-    st.header("📂 Data Management")
-
-    # Targets CSV Import
-    with st.expander("Import Custom Targets"):
-        st.caption("Upload a CSV with custom target profiles (T, Sv, W, etc.)")
-        targets_file = st.file_uploader("Targets CSV", type=['csv'], key="targets_csv", label_visibility="collapsed")
-        if targets_file:
-            st.info("Custom target import feature coming soon!")
-            # TODO: Implement custom target loading
-
-    # Roster CSV Import (moved from main area)
-    with st.expander("Import/Export Roster"):
-        st.caption("Upload or download your army roster as CSV")
-
-        def load_roster_csv():
-            if st.session_state.roster_file is not None:
-                try:
-                    new_df = pd.read_csv(st.session_state.roster_file)
-                    cols_to_str = ['Name', 'Weapon', 'Loadout Group', 'Keywords', 'Profile ID', 'UnitID']
-                    for col in cols_to_str:
-                        if col in new_df.columns:
-                            new_df[col] = new_df[col].astype(str)
-                    st.session_state['roster'] = new_df
-                    st.success("✅ Roster loaded successfully!")
-                except Exception as e:
-                    st.error(f"Error loading roster: {e}")
-
-        st.file_uploader("Import Roster CSV", type=['csv'], key="roster_file", on_change=load_roster_csv, label_visibility="collapsed")
-
-        if 'roster' in st.session_state and not st.session_state['roster'].empty:
-            st.download_button(
-                "💾 Export Roster CSV",
-                st.session_state['roster'].to_csv(index=False).encode('utf-8'),
-                "my_roster.csv",
-                "text/csv",
-                use_container_width=True
-            )
-
-    st.markdown("---")
-    st.caption("v0.3.9 - Global Config Update")
+    st.caption("v0.3.8 RC1 - Optimization Engine Active")
 
 # --- LOAD CONFIG ---
 THEMES = load_themes()
@@ -286,7 +167,7 @@ st.title("⚔️ Mathhammer Analysis")
 
 # --- ARMY DASHBOARD ---
 if not edited_df.empty:
-    army_results = calculate_group_metrics(edited_df, selected_target_stats, deduplicate=False, assume_half_range=assume_half_range)
+    army_results = calculate_group_metrics(edited_df, selected_target_stats, deduplicate=False)
     army_df = pd.DataFrame(army_results)
     
     if not army_df.empty:
@@ -324,17 +205,30 @@ if not edited_df.empty:
     st.divider()
 
 # --- UI TABS ---
-tab_build, tab_cpk, tab_kills, tab_ttk, tab_viz, tab_targets = st.tabs([
-    "🏗️ Roster Manager",
-    "💰 Efficiency (CPK)",
-    "💀 Lethality (Kills)",
+tab_build, tab_cpk, tab_kills, tab_ttk, tab_viz = st.tabs([
+    "🏗️ Roster Manager", 
+    "💰 Efficiency (CPK)", 
+    "💀 Lethality (Kills)", 
     "⏱️ Time to Kill",
-    "📊 Interactive Charts",
-    "🎯 Target Manager"
+    "📊 Interactive Charts"
 ])
 
 # --- TAB 1: BUILDER (Master-Detail View) ---
 with tab_build:
+    # 1. File Uploader
+    def load_csv():
+        if st.session_state.uploaded_file is not None:
+            try:
+                new_df = pd.read_csv(st.session_state.uploaded_file)
+                # Ensure all columns are treated as strings to prevent TypeErrors
+                cols_to_str = ['Name', 'Weapon', 'Loadout Group', 'Keywords', 'Profile ID', 'UnitID']
+                for col in cols_to_str:
+                    if col in new_df.columns:
+                        new_df[col] = new_df[col].astype(str)
+                st.session_state['roster'] = new_df
+            except Exception as e:
+                st.error(f"Error reading CSV: {e}")
+
     # Layout: Master List (Left) | Detail Editor (Right)
     c_list, c_detail = st.columns([1, 2])
     
@@ -398,6 +292,10 @@ with tab_build:
             # Auto-select the new unit
             st.session_state['selected_unit_id'] = new_id
             st.rerun()
+
+        # CSV Controls
+        st.download_button("💾 Save CSV", st.session_state['roster'].to_csv(index=False).encode('utf-8'), "roster.csv", "text/csv", use_container_width=True)
+        st.file_uploader("Import", type=['csv'], key="uploaded_file", on_change=load_csv, label_visibility="collapsed")
 
     # --- RIGHT: DETAIL EDITOR ---
     with c_detail:
@@ -593,10 +491,10 @@ def build_metric_data(metric_key, include_cpk=False):
     cpk_data = {} if include_cpk else None
 
     # Iterate through all targets (columns)
-    for t_key, t_stats in ACTIVE_TARGETS.items():
+    for t_key, t_stats in TARGETS.items():
         # Calculate stats for this target
         # deduplicate=True ensures we see 1 Unit Efficiency (ignoring Qty)
-        group_res = calculate_group_metrics(edited_df, t_stats, deduplicate=True, assume_half_range=assume_half_range)
+        group_res = calculate_group_metrics(edited_df, t_stats, deduplicate=True)
 
         col_data = []
         col_tips = []
@@ -786,313 +684,4 @@ with tab_viz:
         
         c3, c4 = st.columns(2)
         with c3: st.plotly_chart(plot_strength_profile(edited_df, chosen_template), width='stretch')
-        with c4: st.plotly_chart(plot_army_damage(edited_df, unit_colors, chosen_template), width='stretch')# Target Manager Tab Implementation
-# This will be appended to app.py
-
-# --- TAB 6: TARGET MANAGER ---
-with tab_targets:
-    st.header("🎯 Target Manager")
-    st.caption("Create and manage custom target lists for different meta environments")
-
-    # Initialize session state for target manager
-    if 'editing_target_list' not in st.session_state:
-        st.session_state['editing_target_list'] = 'default'
-    if 'editing_profile_name' not in st.session_state:
-        st.session_state['editing_profile_name'] = None
-    if 'creating_new_list' not in st.session_state:
-        st.session_state['creating_new_list'] = False
-
-    # Three column layout
-    col_lists, col_editor, col_preview = st.columns([1, 2, 1])
-
-    # --- LEFT PANEL: TARGET LISTS ---
-    with col_lists:
-        st.subheader("📋 Target Lists")
-
-        # Get available lists
-        available_lists = get_available_target_lists()
-
-        # Display each list
-        for list_name in available_lists:
-            try:
-                metadata = get_target_list_metadata(list_name)
-
-                # Check if this list is active
-                is_active = (list_name == st.session_state.get('active_target_list', 'default'))
-                is_editing = (list_name == st.session_state['editing_target_list'])
-
-                # Create columns for each list item
-                cols = st.columns([1, 5, 2])
-
-                with cols[0]:
-                    if is_active:
-                        st.write("✓")
-
-                with cols[1]:
-                    btn_type = "primary" if is_editing else "secondary"
-                    if st.button(metadata['name'], key=f"edit_list_{list_name}", type=btn_type, use_container_width=True):
-                        st.session_state['editing_target_list'] = list_name
-                        st.session_state['editing_profile_name'] = None
-                        st.session_state['creating_new_list'] = False
-                        st.rerun()
-
-                with cols[2]:
-                    if is_active:
-                        st.caption("Active")
-                    else:
-                        st.caption(f"{metadata['profile_count']} profiles")
-
-            except Exception as e:
-                st.error(f"Error loading {list_name}: {e}")
-
-        st.divider()
-
-        # Create new list button
-        if st.button("➕ Create New List", use_container_width=True):
-            st.session_state['creating_new_list'] = True
-            st.session_state['editing_profile_name'] = None
-            st.rerun()
-
-        # Import/Export buttons
-        st.divider()
-        st.caption("Import/Export")
-
-        # CSV Import
-        uploaded_csv = st.file_uploader("Import from CSV", type=['csv'], key="import_targets_csv")
-        if uploaded_csv is not None:
-            try:
-                csv_content = uploaded_csv.read().decode('utf-8')
-                imported_targets = import_targets_from_csv(csv_content)
-
-                if imported_targets:
-                    st.success(f"Imported {len(imported_targets)} profiles")
-                    # Store in session state for user to save
-                    st.session_state['imported_targets'] = imported_targets
-                else:
-                    st.warning("No valid profiles found in CSV")
-            except Exception as e:
-                st.error(f"Error importing CSV: {e}")
-
-    # --- CENTER PANEL: EDITOR ---
-    with col_editor:
-        # Mode 1: Creating new list
-        if st.session_state['creating_new_list']:
-            st.subheader("Create New Target List")
-
-            with st.form("new_list_form"):
-                new_list_name = st.text_input("List Name", placeholder="e.g., GT Meta 2025")
-                new_list_desc = st.text_area("Description", placeholder="e.g., Common competitive tournament profiles")
-
-                col_submit, col_cancel = st.columns(2)
-                with col_submit:
-                    create_btn = st.form_submit_button("Create List", type="primary", use_container_width=True)
-                with col_cancel:
-                    cancel_btn = st.form_submit_button("Cancel", use_container_width=True)
-
-                if create_btn and new_list_name:
-                    try:
-                        # Create empty target list
-                        filename = save_target_list(new_list_name, {}, new_list_desc)
-                        st.success(f"Created '{new_list_name}'")
-                        st.session_state['editing_target_list'] = filename
-                        st.session_state['creating_new_list'] = False
-                        st.rerun()
-                    except FileExistsError:
-                        st.error(f"List '{new_list_name}' already exists")
-                    except Exception as e:
-                        st.error(f"Error creating list: {e}")
-
-                if cancel_btn:
-                    st.session_state['creating_new_list'] = False
-                    st.rerun()
-
-        # Mode 2: Editing existing list
-        else:
-            editing_list_name = st.session_state['editing_target_list']
-
-            try:
-                list_data = load_target_list(editing_list_name)
-                targets = list_data['targets']
-                is_readonly = list_data.get('readonly', False)
-
-                st.subheader(f"Editing: {list_data['name']}")
-
-                if is_readonly:
-                    st.info("ℹ️ This is a built-in list (read-only). Duplicate to create a custom version.")
-
-                # Profile selector
-                profile_names = list(targets.keys())
-
-                if profile_names:
-                    # Select profile to edit
-                    selected_profile = st.selectbox(
-                        "Select Profile to Edit",
-                        profile_names,
-                        index=profile_names.index(st.session_state['editing_profile_name']) if st.session_state['editing_profile_name'] in profile_names else 0,
-                        key="profile_selector"
-                    )
-
-                    st.session_state['editing_profile_name'] = selected_profile
-
-                    # Profile editor form
-                    profile_data = targets[selected_profile]
-
-                    with st.form(f"edit_profile_{selected_profile}"):
-                        st.caption("Basic Stats")
-
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            edit_T = st.number_input("Toughness (T)", min_value=1, max_value=14, value=int(profile_data.get('T', 4)))
-                            edit_Sv = st.selectbox("Save (Sv)", ["2+", "3+", "4+", "5+", "6+", "7+", "N"], index=["2+", "3+", "4+", "5+", "6+", "7+", "N"].index(str(profile_data.get('Sv', '3+'))))
-                        with col2:
-                            edit_W = st.number_input("Wounds (W)", min_value=1, max_value=30, value=int(profile_data.get('W', 2)))
-                            edit_Pts = st.number_input("Points (Pts)", min_value=1, max_value=1000, value=int(profile_data.get('Pts', 20)))
-
-                        edit_UnitSize = st.number_input("Unit Size", min_value=1, max_value=30, value=int(profile_data.get('UnitSize', 10)))
-
-                        st.caption("Special Rules")
-                        col3, col4 = st.columns(2)
-                        with col3:
-                            edit_Invuln = st.selectbox("Invuln Save", ["N", "2+", "3+", "4+", "5+", "6+"], index=["N", "2+", "3+", "4+", "5+", "6+"].index(str(profile_data.get('Invuln', 'N'))))
-                        with col4:
-                            edit_FNP = st.selectbox("Feel No Pain", ["N", "4+", "5+", "6+"], index=["N", "4+", "5+", "6+"].index(str(profile_data.get('FNP', 'N'))))
-
-                        col_save, col_delete = st.columns(2)
-                        with col_save:
-                            save_btn = st.form_submit_button("💾 Save Changes", type="primary", use_container_width=True, disabled=is_readonly)
-                        with col_delete:
-                            delete_btn = st.form_submit_button("🗑️ Delete Profile", use_container_width=True, disabled=is_readonly)
-
-                        if save_btn:
-                            # Update profile
-                            updated_profile = {
-                                'T': edit_T,
-                                'Sv': edit_Sv,
-                                'W': edit_W,
-                                'UnitSize': edit_UnitSize,
-                                'Pts': edit_Pts,
-                                'Invuln': edit_Invuln,
-                                'FNP': edit_FNP
-                            }
-
-                            targets[selected_profile] = updated_profile
-                            save_target_list(editing_list_name, targets, list_data.get('description', ''), overwrite=True)
-                            st.success(f"Updated '{selected_profile}'")
-                            st.rerun()
-
-                        if delete_btn:
-                            # Delete profile
-                            del targets[selected_profile]
-                            save_target_list(editing_list_name, targets, list_data.get('description', ''), overwrite=True)
-                            st.session_state['editing_profile_name'] = None
-                            st.success(f"Deleted '{selected_profile}'")
-                            st.rerun()
-
-                st.divider()
-
-                # Add new profile
-                if not is_readonly:
-                    with st.expander("➕ Add New Profile"):
-                        with st.form("add_new_profile"):
-                            new_profile_name = st.text_input("Profile Name", placeholder="e.g., Space Marines")
-
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                new_T = st.number_input("T", min_value=1, max_value=14, value=4)
-                                new_Sv = st.selectbox("Sv", ["2+", "3+", "4+", "5+", "6+", "7+", "N"], index=2)
-                            with col2:
-                                new_W = st.number_input("W", min_value=1, max_value=30, value=2)
-                                new_Pts = st.number_input("Pts", min_value=1, max_value=1000, value=20)
-
-                            new_UnitSize = st.number_input("Unit Size", min_value=1, max_value=30, value=10)
-                            new_Invuln = st.selectbox("Invuln", ["N", "2+", "3+", "4+", "5+", "6+"], index=0)
-                            new_FNP = st.selectbox("FNP", ["N", "4+", "5+", "6+"], index=0)
-
-                            add_btn = st.form_submit_button("Add Profile", type="primary")
-
-                            if add_btn and new_profile_name:
-                                if new_profile_name in targets:
-                                    st.error(f"Profile '{new_profile_name}' already exists")
-                                else:
-                                    new_profile = {
-                                        'T': new_T,
-                                        'Sv': new_Sv,
-                                        'W': new_W,
-                                        'UnitSize': new_UnitSize,
-                                        'Pts': new_Pts,
-                                        'Invuln': new_Invuln,
-                                        'FNP': new_FNP
-                                    }
-
-                                    targets[new_profile_name] = new_profile
-                                    save_target_list(editing_list_name, targets, list_data.get('description', ''), overwrite=True)
-                                    st.success(f"Added '{new_profile_name}'")
-                                    st.rerun()
-
-            except Exception as e:
-                st.error(f"Error loading target list: {e}")
-
-    # --- RIGHT PANEL: PREVIEW & ACTIONS ---
-    with col_preview:
-        st.subheader("📊 Preview")
-
-        try:
-            editing_list_name = st.session_state['editing_target_list']
-            list_data = load_target_list(editing_list_name)
-            targets = list_data['targets']
-
-            # Summary metrics
-            profile_count = len(targets)
-            avg_pts = sum(p.get('Pts', 0) for p in targets.values()) / profile_count if profile_count > 0 else 0
-
-            st.metric("Profiles", profile_count)
-            st.metric("Avg Points", f"{avg_pts:.0f}")
-
-            st.divider()
-
-            # List all profiles
-            st.caption("Profiles in this list:")
-            for name, profile in targets.items():
-                cols = st.columns([3, 1])
-                with cols[0]:
-                    st.write(f"• {name}")
-                with cols[1]:
-                    st.caption(f"{profile.get('Pts', 0)}pts")
-
-            st.divider()
-
-            # Actions
-            is_active = (editing_list_name == st.session_state.get('active_target_list', 'default'))
-            is_readonly = list_data.get('readonly', False)
-
-            if not is_active:
-                if st.button("✓ Set as Active", type="primary", use_container_width=True):
-                    st.session_state['active_target_list'] = editing_list_name
-                    st.success(f"Activated '{list_data['name']}'")
-                    st.rerun()
-            else:
-                st.info("✓ This list is active")
-
-            # Export to CSV
-            if st.button("📤 Export to CSV", use_container_width=True):
-                csv_content = export_targets_to_csv(targets)
-                st.download_button(
-                    "Download CSV",
-                    csv_content,
-                    f"{editing_list_name}.csv",
-                    "text/csv",
-                    use_container_width=True
-                )
-
-            # Delete list
-            if not is_readonly and not is_active:
-                if st.button("🗑️ Delete List", use_container_width=True):
-                    if delete_target_list(editing_list_name):
-                        st.success(f"Deleted '{list_data['name']}'")
-                        st.session_state['editing_target_list'] = 'default'
-                        st.rerun()
-                    else:
-                        st.error("Cannot delete this list")
-
-        except Exception as e:
-            st.error(f"Error in preview: {e}")
+        with c4: st.plotly_chart(plot_army_damage(edited_df, unit_colors, chosen_template), width='stretch')

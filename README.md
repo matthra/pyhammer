@@ -98,6 +98,45 @@ Bash
 python mcp_server.py
 This allows compatible AI clients to query your roster's efficiency and receive direct links to specific charts in the dashboard.
 
+📖 Documentation
+
+Comprehensive feature documentation available in the `docs/` folder:
+
+- **[Target Manager](docs/TARGET_MANAGER.md)** - 🆕 Custom target lists for different metas (v0.3.10)
+- **[UX Refactor v0.3.9](docs/UX_REFACTOR_V0.3.9.md)** - Latest UI improvements and global settings
+- **[Grading System](docs/GRADING_SYSTEM.md)** - CPK efficiency letter grades (S to F tier)
+- **[Blast Keyword](docs/BLAST_KEYWORD.md)** - Area-of-effect weapons implementation
+- **[Cover Toggle](docs/COVER_TOGGLE.md)** - Global cover mechanics (+1 save)
+- **[Keywords Implementation](docs/NEW_KEYWORDS_IMPLEMENTATION.md)** - Torrent, Twin-Linked, FNP
+
+See **[docs/README.md](docs/README.md)** for full documentation index.
+
+🧪 Testing
+
+PyHammer has comprehensive test coverage with 26 tests across 6 test suites.
+
+**Run All Tests:**
+```bash
+python tests/run_all_tests.py
+```
+
+**Run Individual Tests:**
+```bash
+python tests/test_blast.py
+python tests/test_cover.py
+python tests/test_range_weapons.py
+```
+
+**Test Coverage:**
+- ✅ Blast keyword (8 tests)
+- ✅ Cover toggle (3 tests)
+- ✅ Melta/Rapid Fire (5 tests)
+- ✅ Multi-mode corner cases (3 tests)
+- ✅ Half range toggle (3 tests)
+- ✅ Keyword integration (4 tests)
+
+See **[tests/README.md](tests/README.md)** for detailed test documentation.
+
 📂 Project Structure
 Plaintext
 
@@ -106,6 +145,14 @@ pyhammer/
 ├── mcp_server.py            # AI Integration Server
 ├── requirements.txt         # Dependencies
 ├── roster.csv               # Default/Saved Roster
+├── docs/                    # Documentation (9 feature docs)
+│   ├── README.md            # Documentation index
+│   ├── UX_REFACTOR_V0.3.9.md
+│   ├── GRADING_SYSTEM.md
+│   └── *.md                 # Feature documentation
+├── tests/                   # Test Suite (26 tests, 100% passing)
+│   ├── run_all_tests.py     # Test runner
+│   └── test_*.py            # Individual test files
 └── src/                     # Source Code
     ├── data/                # Target Profiles (MEQ, TEQ, etc.)
     ├── engine/              # Core Mathhammer Logic (Probabilities)
