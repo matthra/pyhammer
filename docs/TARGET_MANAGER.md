@@ -145,10 +145,10 @@ target_configs/
 ### CSV Format
 
 ```csv
-Name,T,Sv,W,UnitSize,Pts,Invuln,FNP
-Space Marines,4,3+,2,10,20,N,N
-Terminators,5,2+,3,5,40,4+,N
-Knight,12,3+,24,1,400,5+,N
+Name,T,Sv,W,UnitSize,Pts,Invuln,FNP,Stealth
+Space Marines,4,3+,2,10,20,N,N,N
+Terminators,5,2+,3,5,40,4+,N,N
+Knight,12,3+,24,1,400,5+,N,N
 ```
 
 ## Workflow Examples

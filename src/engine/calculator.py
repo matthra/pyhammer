@@ -100,10 +100,15 @@ def apply_blast_modifier(attack_string, unit_size, has_blast):
 
 # --- CORE MATH ENGINE ---
 
-def resolve_single_row(row, defender):
+def resolve_single_row(row, defender, assume_half_range=False):
     """
     Calculates damage for a single row (one weapon profile).
     Returns a dict with 'dead_models' and 'total_damage'.
+
+    Parameters:
+    - row: Weapon profile data
+    - defender: Target profile dict
+    - assume_half_range: If False, apply stealth modifier to hit rolls (default False)
     """
     # 1. Parse Attacker Stats from the Series (row)
     # Apply Blast modifier BEFORE parsing attacks
@@ -125,6 +130,9 @@ def resolve_single_row(row, defender):
     crit_hit_thresh = safe_int(row.get('CritHit', 6), default=6)
     crit_wound_thresh = safe_int(row.get('CritWound', 6), default=6)
 
+    # Check for Stealth on defender
+    stealth = str(defender.get('Stealth', 'N')).upper() == 'Y'
+
     # 2. Hit Phase
     p_crit_hit = max(0, (7 - crit_hit_thresh) / 6.0)
 
@@ -133,7 +141,12 @@ def resolve_single_row(row, defender):
         p_hit_standard = 1.0  # All attacks hit
         hits = attacks
     else:
-        p_hit_standard = max(0, (7 - bs) / 6.0)
+        # Apply stealth modifier if assume_half_range is False
+        effective_bs = bs
+        if not assume_half_range and stealth:
+            effective_bs = bs + 1  # -1 to hit = +1 to BS requirement
+
+        p_hit_standard = max(0, (7 - effective_bs) / 6.0)
         hits = attacks * p_hit_standard
 
     auto_wounds = 0
@@ -194,7 +207,11 @@ def resolve_single_row(row, defender):
     if fnp_val and fnp_val != '':
         fnp_save = safe_int(fnp_val, default=7)
         if fnp_save <= 6:
-            p_fnp_fail = (7 - fnp_save) / 6.0
+            # FNP works like a save - you roll to PREVENT damage
+            # P(prevent damage) = probability to roll fnp_save or higher
+            p_fnp_pass = (7 - fnp_save) / 6.0
+            # P(damage gets through) = probability to fail the FNP roll
+            p_fnp_fail = 1.0 - p_fnp_pass
             # FNP reduces damage-dealing wounds
             damage_dealing_wounds = damage_dealing_wounds * p_fnp_fail
             # Mortal wounds also affected by FNP
@@ -215,7 +232,7 @@ def resolve_single_row(row, defender):
 
     return total_dead, total_raw_dmg
 
-def resolve_weapon_profile(attacker, defender):
+def resolve_weapon_profile(attacker, defender, assume_half_range=False):
     """
     Wrapper function for MCP server compatibility.
     Takes attacker dict and defender dict, returns results dict.
@@ -224,6 +241,7 @@ def resolve_weapon_profile(attacker, defender):
         attacker: Dict with keys like 'Pts', 'A', 'BS', 'S', 'AP', 'D',
                   'Sustained', 'Lethal', 'Dev', 'RR_H', 'RR_W'
         defender: Target profile dict from targets.py
+        assume_half_range: If False, apply stealth modifier to hit rolls (default False)
 
     Returns:
         Dict with 'dead_models' and 'total_damage'
@@ -233,7 +251,7 @@ def resolve_weapon_profile(attacker, defender):
     attacker_series = pd.Series(attacker)
 
     # Call the core calculator
-    dead_models, total_damage = resolve_single_row(attacker_series, defender)
+    dead_models, total_damage = resolve_single_row(attacker_series, defender, assume_half_range)
 
     # Return as dict for MCP server
     return {
@@ -272,8 +290,24 @@ def calculate_group_metrics(df, target_profile, deduplicate=True, assume_half_ra
     rows_to_remove = []
 
     for idx, row in temp_df.iterrows():
-        has_melta = str(row.get('Melta', 'N')).upper() == 'Y'
-        has_rapid_fire = str(row.get('RapidFire', 'N')).upper() == 'Y'
+        # Parse Melta value: 'Y' (legacy) or number like '2' or '4'
+        melta_val = str(row.get('Melta', 'N')).upper()
+        has_melta = melta_val not in ['N', '', '0']
+        melta_damage = 1  # Default to +1 flat damage for legacy 'Y' or '1'
+        if has_melta and melta_val.isdigit():
+            melta_damage = int(melta_val)
+        elif has_melta and melta_val == 'Y':
+            melta_damage = 1  # Legacy support: Melta Y = +1 damage
+
+        # Parse Rapid Fire value: 'Y' (legacy = double) or number like '1' or '2'
+        rapid_fire_val = str(row.get('RapidFire', 'N')).upper()
+        has_rapid_fire = rapid_fire_val not in ['N', '', '0']
+        rapid_fire_bonus = 0
+        if has_rapid_fire and rapid_fire_val.isdigit():
+            rapid_fire_bonus = int(rapid_fire_val)
+        elif has_rapid_fire and rapid_fire_val == 'Y':
+            # Legacy 'Y' means double attacks (add 100% of base attacks)
+            rapid_fire_bonus = None  # Will double attacks instead
 
         if has_melta or has_rapid_fire:
             # Preserve user's Profile ID if they set one, otherwise use 'Range'
@@ -290,6 +324,9 @@ def calculate_group_metrics(df, target_profile, deduplicate=True, assume_half_ra
                 far_row = row.copy()
                 far_row['Weapon'] = f"{row['Weapon']} (far)"
                 far_row['Profile ID'] = profile_id_to_use
+                # Clear the Melta/RapidFire flags on far variant to prevent recursion
+                far_row['Melta'] = 'N'
+                far_row['RapidFire'] = 'N'
                 range_variants.append(far_row)
 
             # Create CLOSE variant (with bonuses)
@@ -300,64 +337,81 @@ def calculate_group_metrics(df, target_profile, deduplicate=True, assume_half_ra
             else:
                 close_row['Weapon'] = f"{row['Weapon']} (close)"
             close_row['Profile ID'] = profile_id_to_use
+            # Clear the flags on close variant too to prevent recursion
+            close_row['Melta'] = 'N'
+            close_row['RapidFire'] = 'N'
 
-            # Apply Rapid Fire bonus: Double attacks
+            # Apply Rapid Fire bonus: Add extra attacks at half range
             if has_rapid_fire:
                 current_attacks = str(close_row.get('A', '1'))
-                # Double the attack value
-                if 'D6' in current_attacks.upper():
-                    # Handle dice notation
-                    if '+' in current_attacks:
-                        parts = current_attacks.split('+')
-                        dice_part = parts[0].upper()
-                        flat = int(parts[1])
-                        if dice_part == 'D6':
-                            close_row['A'] = f'2D6+{flat * 2}'
-                        elif dice_part.endswith('D6'):
-                            num = int(dice_part.replace('D6', ''))
-                            close_row['A'] = f'{num * 2}D6+{flat * 2}'
-                    else:
-                        if current_attacks.upper() == 'D6':
-                            close_row['A'] = '2D6'
-                        elif current_attacks.upper().endswith('D6'):
-                            num = int(current_attacks.upper().replace('D6', ''))
-                            close_row['A'] = f'{num * 2}D6'
-                else:
-                    # Fixed attacks - just double
-                    try:
-                        attacks = int(current_attacks)
-                        close_row['A'] = str(attacks * 2)
-                    except:
-                        close_row['A'] = current_attacks
 
-            # Apply Melta bonus: Re-roll damage (approximate as +50% damage)
-            # Actually, Melta adds +D6 damage at half range
+                if rapid_fire_bonus is None:
+                    # Legacy 'Y' mode: double attacks
+                    if 'D6' in current_attacks.upper():
+                        # Handle dice notation
+                        if '+' in current_attacks:
+                            parts = current_attacks.split('+')
+                            dice_part = parts[0].upper()
+                            flat = int(parts[1])
+                            if dice_part == 'D6':
+                                close_row['A'] = f'2D6+{flat * 2}'
+                            elif dice_part.endswith('D6'):
+                                num = int(dice_part.replace('D6', ''))
+                                close_row['A'] = f'{num * 2}D6+{flat * 2}'
+                        else:
+                            if current_attacks.upper() == 'D6':
+                                close_row['A'] = '2D6'
+                            elif current_attacks.upper().endswith('D6'):
+                                num = int(current_attacks.upper().replace('D6', ''))
+                                close_row['A'] = f'{num * 2}D6'
+                    else:
+                        # Fixed attacks - just double
+                        try:
+                            attacks = int(current_attacks)
+                            close_row['A'] = str(attacks * 2)
+                        except:
+                            close_row['A'] = current_attacks
+                else:
+                    # New numeric mode: add specific bonus attacks
+                    if 'D6' in current_attacks.upper():
+                        # Handle dice notation
+                        if '+' in current_attacks:
+                            parts = current_attacks.split('+')
+                            dice_part = parts[0].upper()
+                            flat = int(parts[1])
+                            close_row['A'] = f'{dice_part}+{flat + rapid_fire_bonus}'
+                        else:
+                            # Just dice, add flat bonus
+                            close_row['A'] = f'{current_attacks}+{rapid_fire_bonus}'
+                    else:
+                        # Fixed attacks - add bonus
+                        try:
+                            attacks = int(current_attacks)
+                            close_row['A'] = str(attacks + rapid_fire_bonus)
+                        except:
+                            close_row['A'] = f'{current_attacks}+{rapid_fire_bonus}'
+
+            # Apply Melta bonus: Add X flat damage at half range
             if has_melta:
                 current_damage = str(close_row.get('D', '1'))
-                # Add +D6 to damage
+                # Add flat damage (where melta_damage = flat damage to add)
                 if 'D6' in current_damage.upper():
                     if '+' in current_damage:
                         parts = current_damage.split('+')
                         dice_part = parts[0].upper()
                         flat = int(parts[1])
-                        if dice_part == 'D6':
-                            close_row['D'] = f'2D6+{flat}'
-                        elif dice_part.endswith('D6'):
-                            num = int(dice_part.replace('D6', ''))
-                            close_row['D'] = f'{num + 1}D6+{flat}'
+                        # Add melta_damage to the flat portion
+                        close_row['D'] = f'{dice_part}+{flat + melta_damage}'
                     else:
-                        if current_damage.upper() == 'D6':
-                            close_row['D'] = '2D6'
-                        elif current_damage.upper().endswith('D6'):
-                            num = int(current_damage.upper().replace('D6', ''))
-                            close_row['D'] = f'{num + 1}D6'
+                        # Just dice, add flat damage
+                        close_row['D'] = f'{current_damage}+{melta_damage}'
                 else:
-                    # Fixed damage - add 3.5 average
+                    # Fixed damage - add flat melta damage
                     try:
                         dmg = int(current_damage)
-                        close_row['D'] = f'{dmg}+D6'
+                        close_row['D'] = str(dmg + melta_damage)
                     except:
-                        close_row['D'] = current_damage
+                        close_row['D'] = f'{current_damage}+{melta_damage}'
 
             range_variants.append(close_row)
             rows_to_remove.append(idx)
@@ -371,7 +425,7 @@ def calculate_group_metrics(df, target_profile, deduplicate=True, assume_half_ra
         temp_df = pd.concat([temp_df, pd.DataFrame(range_variants)], ignore_index=True)
 
     # Run Math
-    metrics = temp_df.apply(lambda row: resolve_single_row(row, target_profile), axis=1, result_type='expand')
+    metrics = temp_df.apply(lambda row: resolve_single_row(row, target_profile, assume_half_range), axis=1, result_type='expand')
     temp_df['row_kills'] = metrics[0]
     temp_df['row_damage'] = metrics[1]
     

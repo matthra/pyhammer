@@ -98,29 +98,29 @@ def plot_threat_matrix_interactive(df, color_map, template):
     return fig
 
 # --- CHART 2: EFFICIENCY CURVES ---
-def plot_efficiency_curve_interactive(df, color_map, template):
+def plot_efficiency_curve_interactive(df, color_map, template, assume_half_range=False):
     # Sort targets by Toughness for a logical X-Axis
     sorted_targets = sorted(TARGETS.items(), key=lambda item: item[1]['T'])
     target_names = [t[1]['Name'].split(' ')[0] for t in sorted_targets]
     target_keys = [t[0] for t in sorted_targets]
-    
+
     records = []
     # Identify unique groups
     groups = df[['Name', 'Loadout Group']].drop_duplicates()
-    
+
     for _, row in groups.iterrows():
         unit_name = row['Name']
         group_name = row['Loadout Group']
         # Use boolean indexing mask
         subset_df = df[(df['Name'] == unit_name) & (df['Loadout Group'] == group_name)]
         unit_id = f"{unit_name} ({group_name})"
-        
+
         for t_key, t_name in zip(target_keys, target_names):
             t_stats = TARGETS[t_key]
             # Calc metrics (Using the robust engine)
-            metrics = calculate_group_metrics(subset_df, t_stats, deduplicate=True) # True = Efficiency
+            metrics = calculate_group_metrics(subset_df, t_stats, deduplicate=True, assume_half_range=assume_half_range) # True = Efficiency
             val = metrics[0]['CPK'] if metrics else 0
-            
+
             records.append({
                 'UnitID': unit_id,
                 'Name': unit_name, # Needed for color mapping
@@ -201,27 +201,27 @@ def plot_strength_profile(df, template):
     return fig
 
 # --- CHART 4: ARMY DAMAGE (Top 4 + Other) ---
-def plot_army_damage(df, color_map, template):
+def plot_army_damage(df, color_map, template, assume_half_range=False):
     sorted_targets = sorted(TARGETS.items(), key=lambda item: item[1]['T'])
     target_names = [t[1]['Name'].split(' ')[0] for t in sorted_targets]
     target_keys = [t[0] for t in sorted_targets]
-    
+
     records = []
-    
+
     for t_key, t_name in zip(target_keys, target_names):
         t_stats = TARGETS[t_key]
-        
+
         unit_damages = []
         groups = df[['Name', 'Loadout Group']].drop_duplicates()
-        
+
         for _, row in groups.iterrows():
             unit_name = row['Name']
             group_name = row['Loadout Group']
             subset_df = df[(df['Name'] == unit_name) & (df['Loadout Group'] == group_name)]
             unit_id = f"{unit_name} ({group_name})"
-            
+
             # Use deduplicate=False to get TOTAL ARMY DAMAGE
-            metrics = calculate_group_metrics(subset_df, t_stats, deduplicate=False)
+            metrics = calculate_group_metrics(subset_df, t_stats, deduplicate=False, assume_half_range=assume_half_range)
             kills = metrics[0]['Kills'] if metrics else 0
             dmg = kills * t_stats.get('W', 1)
             

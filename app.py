@@ -22,6 +22,15 @@ try:
         import_targets_from_csv,
         export_targets_to_csv
     )
+    from src.data.roster_manager import (
+        get_available_rosters,
+        load_roster_file,
+        save_roster_file,
+        delete_roster,
+        get_roster_metadata,
+        validate_roster_data,
+        create_empty_roster
+    )
     from src.engine.calculator import calculate_group_metrics
     from src.engine.grading import get_cpk_grade, get_grade_color
     from src.visualizations.theme_utils import load_themes, get_unit_color_map
@@ -96,8 +105,10 @@ with st.sidebar:
 
     # Update active list if changed
     selected_list_name = available_lists[list_display_names.index(selected_list_display)]
-    if selected_list_name != st.session_state['active_target_list']:
+    prev_target_list = st.session_state.get('active_target_list')
+    if selected_list_name != prev_target_list:
         st.session_state['active_target_list'] = selected_list_name
+        st.toast(f"📋 Target list changed to: {selected_list_display}", icon="🎯")
 
     # Load targets from selected list
     try:
@@ -109,8 +120,18 @@ with st.sidebar:
 
     # Enemy profile dropdown (from active list)
     target_keys = list(ACTIVE_TARGETS.keys())
+
+    # Track previous target for change detection
+    if 'prev_target_key' not in st.session_state:
+        st.session_state['prev_target_key'] = target_keys[0] if target_keys else None
+
     default_idx = target_keys.index("Marine Equivalent") if "Marine Equivalent" in target_keys else 0
     selected_target_key = st.selectbox("Enemy Profile", target_keys, index=default_idx, label_visibility="collapsed")
+
+    # Detect target change
+    if selected_target_key != st.session_state.get('prev_target_key'):
+        st.session_state['prev_target_key'] = selected_target_key
+        st.toast(f"🎯 Target changed to: {selected_target_key}", icon="🎯")
 
     selected_target_stats = ACTIVE_TARGETS[selected_target_key].copy()
 
@@ -119,19 +140,49 @@ with st.sidebar:
     # === GLOBAL MODIFIERS ===
     st.header("⚙️ Global Settings")
 
+    # Initialize toggles in session state
+    if 'assume_cover' not in st.session_state:
+        st.session_state['assume_cover'] = False
+    if 'assume_half_range' not in st.session_state:
+        st.session_state['assume_half_range'] = False
+
+    # Track previous values for change detection
+    prev_cover = st.session_state['assume_cover']
+    prev_half_range = st.session_state['assume_half_range']
+
     # Cover Toggle
     assume_cover = st.checkbox(
         "🪨 Assume Cover",
-        value=False,
+        value=st.session_state['assume_cover'],
+        key='cover_checkbox',
         help="Apply +1 to armor save for all targets (simulates light cover/ruins)"
     )
+
+    # Detect cover toggle change
+    if assume_cover != prev_cover:
+        if assume_cover:
+            st.toast("✅ Cover enabled - Calculations updated (+1 to all saves)", icon="🪨")
+        else:
+            st.toast("❌ Cover disabled - Calculations updated", icon="🪨")
+
+    st.session_state['assume_cover'] = assume_cover
 
     # Half Range Toggle
     assume_half_range = st.checkbox(
         "📏 Assume Half Range",
-        value=False,
+        value=st.session_state['assume_half_range'],
+        key='half_range_checkbox',
         help="Apply Melta and Rapid Fire bonuses globally (close combat engagement)"
     )
+
+    # Detect half range toggle change
+    if assume_half_range != prev_half_range:
+        if assume_half_range:
+            st.toast("✅ Half Range enabled - Melta & Rapid Fire bonuses applied", icon="📏")
+        else:
+            st.toast("❌ Half Range disabled - Calculations updated", icon="📏")
+
+    st.session_state['assume_half_range'] = assume_half_range
 
     # Apply cover bonus if enabled
     if assume_cover:
@@ -156,33 +207,126 @@ with st.sidebar:
             st.info("Custom target import feature coming soon!")
             # TODO: Implement custom target loading
 
-    # Roster CSV Import (moved from main area)
-    with st.expander("Import/Export Roster"):
-        st.caption("Upload or download your army roster as CSV")
+    # === ROSTER MANAGEMENT ===
+    st.header("📊 Roster Management")
 
-        def load_roster_csv():
-            if st.session_state.roster_file is not None:
-                try:
-                    new_df = pd.read_csv(st.session_state.roster_file)
-                    cols_to_str = ['Name', 'Weapon', 'Loadout Group', 'Keywords', 'Profile ID', 'UnitID']
-                    for col in cols_to_str:
-                        if col in new_df.columns:
-                            new_df[col] = new_df[col].astype(str)
-                    st.session_state['roster'] = new_df
-                    st.success("✅ Roster loaded successfully!")
-                except Exception as e:
-                    st.error(f"Error loading roster: {e}")
+    # Initialize current roster file in session state
+    if 'current_roster_file' not in st.session_state:
+        st.session_state['current_roster_file'] = 'default_roster'
 
-        st.file_uploader("Import Roster CSV", type=['csv'], key="roster_file", on_change=load_roster_csv, label_visibility="collapsed")
+    # Get available rosters
+    available_rosters = get_available_rosters()
 
-        if 'roster' in st.session_state and not st.session_state['roster'].empty:
-            st.download_button(
-                "💾 Export Roster CSV",
-                st.session_state['roster'].to_csv(index=False).encode('utf-8'),
-                "my_roster.csv",
-                "text/csv",
-                use_container_width=True
-            )
+    # Roster selection dropdown
+    selected_roster = st.selectbox(
+        "Select Roster",
+        available_rosters,
+        index=available_rosters.index(st.session_state['current_roster_file'])
+              if st.session_state['current_roster_file'] in available_rosters else 0,
+        key='roster_selector'
+    )
+
+    # Load roster when selection changes
+    if selected_roster != st.session_state['current_roster_file']:
+        try:
+            st.session_state['roster'] = load_roster_file(selected_roster)
+            st.session_state['current_roster_file'] = selected_roster
+            st.toast(f"✅ Loaded roster: {selected_roster}", icon="📊")
+            # No explicit rerun needed - selectbox change triggers automatic rerun
+        except Exception as e:
+            st.error(f"Error loading roster: {e}")
+
+    # Roster action buttons
+    col1, col2 = st.columns(2)
+
+    with col1:
+        # New Roster button
+        if st.button("📁 New Roster", use_container_width=True):
+            st.session_state['roster'] = create_empty_roster()
+            st.session_state['current_roster_file'] = 'new_roster'
+            st.toast("✅ Created new roster", icon="📁")
+            # Button click triggers automatic rerun
+
+    with col2:
+        # Delete Roster button
+        if st.button("🗑️ Delete", use_container_width=True,
+                     disabled=(st.session_state['current_roster_file'] == 'default_roster')):
+            # Show confirmation in session state
+            st.session_state['confirm_delete'] = True
+
+    # Delete confirmation dialog
+    if st.session_state.get('confirm_delete', False):
+        st.warning(f"⚠️ Delete '{st.session_state['current_roster_file']}'?")
+        dcol1, dcol2 = st.columns(2)
+        with dcol1:
+            if st.button("✅ Yes, Delete", use_container_width=True):
+                deleted_name = st.session_state['current_roster_file']
+                if delete_roster(deleted_name):
+                    st.session_state['current_roster_file'] = 'default_roster'
+                    st.session_state['roster'] = load_roster_file('default_roster')
+                    st.session_state['confirm_delete'] = False
+                    st.toast(f"🗑️ Deleted roster: {deleted_name}", icon="✅")
+                    # Button click triggers automatic rerun
+                else:
+                    st.error("❌ Cannot delete this roster")
+                    st.session_state['confirm_delete'] = False
+        with dcol2:
+            if st.button("❌ Cancel", use_container_width=True):
+                st.session_state['confirm_delete'] = False
+                # Button click triggers automatic rerun
+
+    # Save roster name input (for new rosters or save as)
+    if st.session_state['current_roster_file'] in ['new_roster', '']:
+        roster_name = st.text_input(
+            "Roster Name",
+            value="my_roster",
+            help="Name for saving this roster"
+        )
+    else:
+        roster_name = st.session_state['current_roster_file']
+
+    # Save and Save & Recalculate buttons
+    save_col1, save_col2 = st.columns(2)
+
+    with save_col1:
+        if st.button("💾 Save", use_container_width=True):
+            try:
+                # Validate before saving
+                is_valid, error_msg = validate_roster_data(st.session_state['roster'])
+                if not is_valid:
+                    st.error(f"❌ Cannot save: {error_msg}")
+                else:
+                    saved_name = save_roster_file(
+                        st.session_state['roster'],
+                        roster_name,
+                        description="",
+                        overwrite=True
+                    )
+                    st.session_state['current_roster_file'] = saved_name
+                    st.toast(f"💾 Saved: {saved_name}", icon="✅")
+            except Exception as e:
+                st.error(f"Error saving roster: {e}")
+
+    with save_col2:
+        if st.button("💾 Save & Recalculate", use_container_width=True, type="primary"):
+            try:
+                # Validate before saving
+                is_valid, error_msg = validate_roster_data(st.session_state['roster'])
+                if not is_valid:
+                    st.error(f"❌ Cannot save: {error_msg}")
+                else:
+                    # Save the roster
+                    saved_name = save_roster_file(
+                        st.session_state['roster'],
+                        roster_name,
+                        description="",
+                        overwrite=True
+                    )
+                    st.session_state['current_roster_file'] = saved_name
+                    st.toast(f"💾 Saved & recalculated: {saved_name}", icon="✅")
+                    # Button click triggers automatic rerun - calculations will update
+            except Exception as e:
+                st.error(f"Error saving roster: {e}")
 
     st.markdown("---")
     st.caption("v0.3.9 - Global Config Update")
@@ -192,8 +336,13 @@ THEMES = load_themes()
 
 # --- INITIAL DATA ---
 if 'roster' not in st.session_state:
-    # Now much cleaner!
-    st.session_state['roster'] = pd.DataFrame(DEFAULT_ROSTER)
+    # Load default roster from JSON file
+    try:
+        st.session_state['roster'] = load_roster_file('default_roster')
+    except Exception as e:
+        # Fallback to hardcoded DEFAULT_ROSTER if file doesn't exist
+        st.warning(f"Could not load default_roster.json, using fallback: {e}")
+        st.session_state['roster'] = pd.DataFrame(DEFAULT_ROSTER)
 
 # --- ROBUST SANITIZATION ---
 # 1. Retrieve data
@@ -286,6 +435,10 @@ st.title("⚔️ Mathhammer Analysis")
 
 # --- ARMY DASHBOARD ---
 if not edited_df.empty:
+    # Debug indicator for half range mode
+    if assume_half_range:
+        st.info("📏 Half Range Mode: ACTIVE - Melta and Rapid Fire bonuses are applied")
+
     army_results = calculate_group_metrics(edited_df, selected_target_stats, deduplicate=False, assume_half_range=assume_half_range)
     army_df = pd.DataFrame(army_results)
     
@@ -486,10 +639,27 @@ with tab_build:
                         k5, k6, k7, k8 = st.columns(4)
                         curr_blast = str(row.get('Blast', 'N')).upper() == 'Y'
                         w_blast = k5.checkbox("Blast", value=curr_blast, help="Bonus attacks vs large units (6+ models)")
-                        curr_melta = str(row.get('Melta', 'N')).upper() == 'Y'
-                        w_melta = k6.checkbox("Melta", value=curr_melta, help="Bonus damage at half range")
-                        curr_rapid_fire = str(row.get('RapidFire', 'N')).upper() == 'Y'
-                        w_rapid_fire = k7.checkbox("Rapid Fire", value=curr_rapid_fire, help="Double attacks at half range")
+
+                        # Parse Melta value: 'Y'/'N' (legacy) or number
+                        melta_val = str(row.get('Melta', '0')).upper()
+                        if melta_val == 'Y':
+                            curr_melta = 1
+                        elif melta_val == 'N' or melta_val == '':
+                            curr_melta = 0
+                        else:
+                            curr_melta = int(melta_val) if melta_val.isdigit() else 0
+                        w_melta = k6.number_input("Melta", min_value=0, max_value=6, value=curr_melta, help="Add X flat damage at half range (e.g., Melta 4 = +4 damage)")
+
+                        # Parse Rapid Fire value: 'Y'/'N' (legacy) or number
+                        rapid_fire_val = str(row.get('RapidFire', '0')).upper()
+                        if rapid_fire_val == 'Y':
+                            curr_rapid_fire = 1  # Legacy 'Y' = Rapid Fire 1
+                        elif rapid_fire_val == 'N' or rapid_fire_val == '':
+                            curr_rapid_fire = 0
+                        else:
+                            curr_rapid_fire = int(rapid_fire_val) if rapid_fire_val.isdigit() else 0
+                        w_rapid_fire = k7.number_input("Rapid Fire", min_value=0, max_value=6, value=curr_rapid_fire, help="Add X extra attacks at half range (e.g., Rapid Fire 1 = +1 attack)")
+
                         curr_sustained = int(row.get('Sustained', 0)) if str(row.get('Sustained', 0)).isdigit() else 0
                         w_sustained = k8.number_input("Sustained Hits", min_value=0, max_value=6, value=curr_sustained, help="Extra hits on critical")
 
@@ -523,8 +693,8 @@ with tab_build:
                             st.session_state['roster'].at[idx, 'Torrent'] = 'Y' if w_torrent else 'N'
                             st.session_state['roster'].at[idx, 'TwinLinked'] = 'Y' if w_twin else 'N'
                             st.session_state['roster'].at[idx, 'Blast'] = 'Y' if w_blast else 'N'
-                            st.session_state['roster'].at[idx, 'Melta'] = 'Y' if w_melta else 'N'
-                            st.session_state['roster'].at[idx, 'RapidFire'] = 'Y' if w_rapid_fire else 'N'
+                            st.session_state['roster'].at[idx, 'Melta'] = str(w_melta) if w_melta > 0 else 'N'
+                            st.session_state['roster'].at[idx, 'RapidFire'] = str(w_rapid_fire) if w_rapid_fire > 0 else 'N'
                             st.session_state['roster'].at[idx, 'Sustained'] = w_sustained
                             st.session_state['roster'].at[idx, 'CritHit'] = w_crit_hit
                             st.session_state['roster'].at[idx, 'CritWound'] = w_crit_wound
@@ -581,7 +751,7 @@ def get_cpk_background_colors(df_cpk):
         return df_cpk.applymap(cpk_to_color)
 
 # --- HELPER: BUILD METRICS TABLE ---
-def build_metric_data(metric_key, include_cpk=False):
+def build_metric_data(metric_key, include_cpk=False, assume_half_range=False):
     """
     Returns TWO or THREE dataframes:
     1. df_values: The numeric stats (CPK, Kills, etc)
@@ -665,7 +835,7 @@ with tab_cpk:
                            unsafe_allow_html=True)
 
     if not edited_df.empty:
-        vals, tips = build_metric_data('CPK')
+        vals, tips = build_metric_data('CPK', assume_half_range=assume_half_range)
         if not vals.empty:
             # Active Weapon Profiles (Collapsible)
             with st.expander("🔧 Active Weapon Profiles"):
@@ -702,7 +872,7 @@ with tab_kills:
                            unsafe_allow_html=True)
 
     if not edited_df.empty:
-        vals, tips, cpk_vals = build_metric_data('Kills', include_cpk=True)
+        vals, tips, cpk_vals = build_metric_data('Kills', include_cpk=True, assume_half_range=assume_half_range)
         if not vals.empty:
             # Active Weapon Profiles (Collapsible)
             with st.expander("🔧 Active Weapon Profiles"):
@@ -740,7 +910,7 @@ with tab_ttk:
                            unsafe_allow_html=True)
 
     if not edited_df.empty:
-        vals, tips, cpk_vals = build_metric_data('TTK', include_cpk=True)
+        vals, tips, cpk_vals = build_metric_data('TTK', include_cpk=True, assume_half_range=assume_half_range)
         if not vals.empty:
             # Active Weapon Profiles (Collapsible)
             with st.expander("🔧 Active Weapon Profiles"):
@@ -777,16 +947,16 @@ with tab_viz:
         
         # 4. Render Charts
         st.subheader(f"Analysis vs {selected_target_key}")
-        
+
         c1, c2 = st.columns(2)
         with c1: st.plotly_chart(plot_threat_matrix_interactive(edited_df, unit_colors, chosen_template), width='stretch')
-        with c2: st.plotly_chart(plot_efficiency_curve_interactive(edited_df, unit_colors, chosen_template), width='stretch')
-        
+        with c2: st.plotly_chart(plot_efficiency_curve_interactive(edited_df, unit_colors, chosen_template, assume_half_range), width='stretch')
+
         st.divider()
-        
+
         c3, c4 = st.columns(2)
         with c3: st.plotly_chart(plot_strength_profile(edited_df, chosen_template), width='stretch')
-        with c4: st.plotly_chart(plot_army_damage(edited_df, unit_colors, chosen_template), width='stretch')# Target Manager Tab Implementation
+        with c4: st.plotly_chart(plot_army_damage(edited_df, unit_colors, chosen_template, assume_half_range), width='stretch')# Target Manager Tab Implementation
 # This will be appended to app.py
 
 # --- TAB 6: TARGET MANAGER ---
@@ -951,28 +1121,47 @@ with tab_targets:
                         edit_UnitSize = st.number_input("Unit Size", min_value=1, max_value=30, value=int(profile_data.get('UnitSize', 10)))
 
                         st.caption("Special Rules")
-                        col3, col4 = st.columns(2)
+                        col3, col4, col5 = st.columns(3)
                         with col3:
-                            edit_Invuln = st.selectbox("Invuln Save", ["N", "2+", "3+", "4+", "5+", "6+"], index=["N", "2+", "3+", "4+", "5+", "6+"].index(str(profile_data.get('Invuln', 'N'))))
+                            # Handle both 'Invuln' and 'Inv' keys, convert empty string to 'N'
+                            invuln_val = profile_data.get('Invuln', profile_data.get('Inv', 'N'))
+                            invuln_val = 'N' if invuln_val == '' else str(invuln_val)
+                            edit_Invuln = st.selectbox("Invuln Save", ["N", "2+", "3+", "4+", "5+", "6+"], index=["N", "2+", "3+", "4+", "5+", "6+"].index(invuln_val))
                         with col4:
-                            edit_FNP = st.selectbox("Feel No Pain", ["N", "4+", "5+", "6+"], index=["N", "4+", "5+", "6+"].index(str(profile_data.get('FNP', 'N'))))
+                            # Convert empty string to 'N'
+                            fnp_val = profile_data.get('FNP', 'N')
+                            fnp_val = 'N' if fnp_val == '' else str(fnp_val)
+                            edit_FNP = st.selectbox("Feel No Pain", ["N", "4+", "5+", "6+"], index=["N", "4+", "5+", "6+"].index(fnp_val))
+                        with col5:
+                            # Convert empty string to 'N'
+                            stealth_val = profile_data.get('Stealth', 'N')
+                            stealth_val = 'N' if stealth_val == '' else str(stealth_val)
+                            edit_Stealth = st.selectbox("Stealth", ["N", "Y"], index=["N", "Y"].index(stealth_val))
 
-                        col_save, col_delete = st.columns(2)
-                        with col_save:
-                            save_btn = st.form_submit_button("💾 Save Changes", type="primary", use_container_width=True, disabled=is_readonly)
-                        with col_delete:
-                            delete_btn = st.form_submit_button("🗑️ Delete Profile", use_container_width=True, disabled=is_readonly)
+                        if is_readonly:
+                            # Show a dummy submit button for read-only forms to avoid Streamlit warning
+                            st.form_submit_button("Read-Only (Cannot Edit)", disabled=True, use_container_width=True)
+                            save_btn = False
+                            delete_btn = False
+                        else:
+                            col_save, col_delete = st.columns(2)
+                            with col_save:
+                                save_btn = st.form_submit_button("💾 Save Changes", type="primary", use_container_width=True)
+                            with col_delete:
+                                delete_btn = st.form_submit_button("🗑️ Delete Profile", use_container_width=True)
 
-                        if save_btn:
-                            # Update profile
+                        if save_btn and not is_readonly:
+                            # Update profile - use 'Inv' to match JSON structure
                             updated_profile = {
+                                'Name': profile_data.get('Name', ''),
                                 'T': edit_T,
                                 'Sv': edit_Sv,
                                 'W': edit_W,
                                 'UnitSize': edit_UnitSize,
                                 'Pts': edit_Pts,
-                                'Invuln': edit_Invuln,
-                                'FNP': edit_FNP
+                                'Inv': edit_Invuln,
+                                'FNP': edit_FNP,
+                                'Stealth': edit_Stealth
                             }
 
                             targets[selected_profile] = updated_profile
@@ -980,7 +1169,7 @@ with tab_targets:
                             st.success(f"Updated '{selected_profile}'")
                             st.rerun()
 
-                        if delete_btn:
+                        if delete_btn and not is_readonly:
                             # Delete profile
                             del targets[selected_profile]
                             save_target_list(editing_list_name, targets, list_data.get('description', ''), overwrite=True)
@@ -1005,8 +1194,14 @@ with tab_targets:
                                 new_Pts = st.number_input("Pts", min_value=1, max_value=1000, value=20)
 
                             new_UnitSize = st.number_input("Unit Size", min_value=1, max_value=30, value=10)
-                            new_Invuln = st.selectbox("Invuln", ["N", "2+", "3+", "4+", "5+", "6+"], index=0)
-                            new_FNP = st.selectbox("FNP", ["N", "4+", "5+", "6+"], index=0)
+
+                            col6, col7, col8 = st.columns(3)
+                            with col6:
+                                new_Invuln = st.selectbox("Invuln", ["N", "2+", "3+", "4+", "5+", "6+"], index=0)
+                            with col7:
+                                new_FNP = st.selectbox("FNP", ["N", "4+", "5+", "6+"], index=0)
+                            with col8:
+                                new_Stealth = st.selectbox("Stealth", ["N", "Y"], index=0)
 
                             add_btn = st.form_submit_button("Add Profile", type="primary")
 
@@ -1015,13 +1210,15 @@ with tab_targets:
                                     st.error(f"Profile '{new_profile_name}' already exists")
                                 else:
                                     new_profile = {
+                                        'Name': new_profile_name,
                                         'T': new_T,
                                         'Sv': new_Sv,
                                         'W': new_W,
                                         'UnitSize': new_UnitSize,
                                         'Pts': new_Pts,
-                                        'Invuln': new_Invuln,
-                                        'FNP': new_FNP
+                                        'Inv': new_Invuln,
+                                        'FNP': new_FNP,
+                                        'Stealth': new_Stealth
                                     }
 
                                     targets[new_profile_name] = new_profile

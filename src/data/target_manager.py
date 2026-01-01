@@ -196,8 +196,8 @@ def import_targets_from_csv(csv_content: str) -> Dict:
     Import target profiles from CSV content.
 
     Expected CSV format:
-    Name,T,Sv,W,UnitSize,Pts,Invuln,FNP
-    MEQ,4,3+,2,10,20,N,N
+    Name,T,Sv,W,UnitSize,Pts,Invuln,FNP,Stealth
+    MEQ,4,3+,2,10,20,N,N,N
 
     Args:
         csv_content: CSV file content as string
@@ -223,7 +223,8 @@ def import_targets_from_csv(csv_content: str) -> Dict:
             'UnitSize': int(row.get('UnitSize', 10)),
             'Pts': int(row.get('Pts', 20)),
             'Invuln': row.get('Invuln', 'N'),
-            'FNP': row.get('FNP', 'N')
+            'FNP': row.get('FNP', 'N'),
+            'Stealth': row.get('Stealth', 'N')
         }
 
         # Validate profile
@@ -250,7 +251,7 @@ def export_targets_to_csv(targets: Dict) -> str:
     from io import StringIO
 
     output = StringIO()
-    fieldnames = ['Name', 'T', 'Sv', 'W', 'UnitSize', 'Pts', 'Invuln', 'FNP']
+    fieldnames = ['Name', 'T', 'Sv', 'W', 'UnitSize', 'Pts', 'Invuln', 'FNP', 'Stealth']
     writer = csv.DictWriter(output, fieldnames=fieldnames)
 
     writer.writeheader()
@@ -264,7 +265,8 @@ def export_targets_to_csv(targets: Dict) -> str:
             'UnitSize': profile.get('UnitSize', 10),
             'Pts': profile.get('Pts', 20),
             'Invuln': profile.get('Invuln', 'N'),
-            'FNP': profile.get('FNP', 'N')
+            'FNP': profile.get('FNP', 'N'),
+            'Stealth': profile.get('Stealth', 'N')
         }
         writer.writerow(row)
 
