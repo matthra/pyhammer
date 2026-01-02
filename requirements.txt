@@ -1,5 +1,13 @@
+# PyHammer Original (Streamlit) Requirements
+# For the legacy Streamlit app (app.py)
+
 streamlit
-pandas
+pandas==2.3.3
 matplotlib
 mcp>=1.0.0
-plotly
+plotly==6.5.0
+numpy==2.4.0
+
+# Note: For the new React + FastAPI version, see:
+# - backend/requirements.txt (FastAPI backend)
+# - frontend/package.json (React frontend)

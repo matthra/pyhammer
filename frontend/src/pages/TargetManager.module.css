@@ -1,0 +1,13 @@
+.manager {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.manager h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.manager p {
+  color: var(--text-secondary);
+}

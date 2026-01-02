@@ -1,0 +1,148 @@
+.analysis {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 2rem;
+  margin-bottom: 0.25rem;
+}
+
+.header p {
+  color: var(--text-secondary);
+}
+
+.controls {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  gap: 2rem;
+  align-items: end;
+}
+
+.controlGroup {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.controlGroup label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.controlGroup select {
+  padding: 0.625rem;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.toggles {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.checkbox input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.targetSection {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.targetSection h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.badge {
+  font-size: 0.875rem;
+  font-weight: normal;
+  color: var(--text-secondary);
+  background-color: var(--bg-tertiary);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+}
+
+.metricsTable {
+  overflow-x: auto;
+}
+
+.metricsTable table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.metricsTable th {
+  text-align: left;
+  padding: 0.75rem;
+  background-color: var(--bg-tertiary);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.metricsTable td {
+  padding: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.metricsTable tbody tr:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.grade {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: white;
+}
+
+.loading,
+.empty {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-secondary);
+  background-color: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+}

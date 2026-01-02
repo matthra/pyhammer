@@ -1,9 +1,17 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test the Stealth rule implementation.
 
 Stealth grants -1 to be hit when assume_half_range is False.
 This is simulated by increasing the BS requirement by 1.
 """
+
+import sys
+import os
+
+# Add parent directory to path for src imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pandas as pd
 from src.engine.calculator import resolve_single_row, calculate_group_metrics

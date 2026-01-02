@@ -1,0 +1,207 @@
+.manager {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 2rem;
+  margin-bottom: 0.25rem;
+}
+
+.header p {
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+}
+
+.sidebar {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  height: fit-content;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+.sidebar h3 {
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+}
+
+.rosterList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rosterItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background-color: var(--bg-tertiary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.rosterItem:hover {
+  background-color: var(--bg-primary);
+}
+
+.rosterInfo {
+  flex: 1;
+}
+
+.rosterName {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.rosterStats {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.main {
+  flex: 1;
+}
+
+.unitList h3 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.unitCard {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.unitHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+
+.unitHeader h4 {
+  font-size: 1.125rem;
+  margin-bottom: 0.25rem;
+}
+
+.unitHeader p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.unitActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.weaponsList {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+}
+
+.empty {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-secondary);
+  background-color: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+}
+
+/* Buttons */
+.btnPrimary,
+.btnSecondary,
+.btnSuccess,
+.btnDanger,
+.btnIcon {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btnPrimary {
+  background-color: var(--accent-primary);
+  color: white;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+}
+
+.btnSecondary {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btnSecondary:hover {
+  background-color: var(--bg-primary);
+}
+
+.btnSuccess {
+  background-color: var(--success);
+  color: white;
+}
+
+.btnSuccess:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btnDanger {
+  background-color: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  padding: 0.5rem;
+}
+
+.btnDanger:hover {
+  background-color: var(--danger);
+  color: white;
+}
+
+.btnIcon {
+  background-color: transparent;
+  color: var(--text-secondary);
+  padding: 0.5rem;
+}
+
+.btnIcon:hover {
+  color: var(--danger);
+  background-color: var(--bg-primary);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

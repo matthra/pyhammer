@@ -1,9 +1,17 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test Melta and Rapid Fire numeric values.
 
 Melta X: Add X flat damage at half range
 Rapid Fire X: Add X extra attacks at half range
 """
+
+import sys
+import os
+
+# Add parent directory to path for src imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pandas as pd
 from src.engine.calculator import calculate_group_metrics

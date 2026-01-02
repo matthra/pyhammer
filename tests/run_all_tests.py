@@ -26,7 +26,10 @@ TEST_FILES = [
     'test_cover.py',            # Cover toggle
     'test_range_weapons.py',    # Melta and Rapid Fire
     'test_multi_mode_range.py', # Multi-mode corner cases
-    'test_half_range_toggle.py' # Half range toggle
+    'test_half_range_toggle.py',# Half range toggle
+    'test_melta_rapidfire.py',  # Melta/Rapid Fire numeric values
+    'test_stealth.py',          # Stealth keyword
+    'test_target_manager_basic.py' # Target manager
 ]
 
 def run_test_file(filename):
@@ -109,7 +112,10 @@ def main():
         print("  • Multi-mode corner cases (3 tests)")
         print("  • Half range toggle (3 tests)")
         print("  • Keyword integration (4 tests)")
-        print("  • Total: 26 tests, all passing ✅")
+        print("  • Melta/Rapid Fire numeric (tests)")
+        print("  • Stealth keyword (tests)")
+        print("  • Target manager (tests)")
+        print("  • Total: 30+ tests, all passing ✅")
         return 0
     else:
         print(f"\n❌ {failed} TEST SUITE(S) FAILED")
