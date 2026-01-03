@@ -25,15 +25,42 @@ const useStore = create((set, get) => ({
   setRoster: (roster) => set({ roster }),
   setRosterFilename: (filename) => set({ rosterFilename: filename }),
 
-  addWeapon: (weapon) => set((state) => ({
-    roster: [...state.roster, weapon]
-  })),
+  addWeapon: (weapon, unitId = null) => set((state) => {
+    // If unitId is provided, inherit Name, Qty, Pts from existing unit weapons
+    if (unitId) {
+      const existingWeapon = state.roster.find(w => w.UnitID === unitId)
+      if (existingWeapon) {
+        weapon = {
+          ...weapon,
+          UnitID: unitId,
+          Name: existingWeapon.Name,
+          Qty: existingWeapon.Qty,
+          Pts: existingWeapon.Pts
+        }
+      }
+    }
+    return { roster: [...state.roster, weapon] }
+  }),
 
   updateWeapon: (unitId, weaponIndex, updates) => set((state) => ({
     roster: state.roster.map((weapon, idx) =>
       weapon.UnitID === unitId && idx === weaponIndex
         ? { ...weapon, ...updates }
         : weapon
+    )
+  })),
+
+  updateUnitAttributes: (unitId, updates) => set((state) => ({
+    roster: state.roster.map((weapon) =>
+      weapon.UnitID === unitId
+        ? { ...weapon, ...updates }
+        : weapon
+    )
+  })),
+
+  deleteWeapon: (unitId, weaponIndex) => set((state) => ({
+    roster: state.roster.filter((weapon, idx) =>
+      !(weapon.UnitID === unitId && idx === weaponIndex)
     )
   })),
 

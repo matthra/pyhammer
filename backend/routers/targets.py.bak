@@ -23,14 +23,13 @@ async def get_target_lists():
 
         for filename in target_files:
             try:
-                data = load_target_list(filename)
-                targets_dict = data.get('targets', {})
+                targets = load_target_list(filename)
 
                 summaries.append(TargetListSummary(
                     filename=filename,
-                    name=data.get('name', filename),
-                    target_count=len(targets_dict),
-                    targets=[t.get('Name', key) for key, t in targets_dict.items()]
+                    name=filename.replace('.json', ''),
+                    target_count=len(targets),
+                    targets=[t['Name'] for t in targets]
                 ))
             except Exception:
                 continue
@@ -47,38 +46,21 @@ async def get_target_lists():
 async def load_target_list_by_name(filename: str):
     """Load a specific target list by filename"""
     try:
-        data = load_target_list(filename)
-        targets_dict = data.get('targets', {})
-
-        # Helper to safely convert to int, handling string values
-        def safe_int(value, default):
-            try:
-                return int(value)
-            except (ValueError, TypeError):
-                return default
+        targets_data = load_target_list(filename)
 
         # Convert to TargetProfile models
         targets = []
-        for key, target_dict in targets_dict.items():
-            # Handle 'N' values for optional fields
-            inv_val = target_dict.get('Inv', '')
-            if inv_val == 'N':
-                inv_val = ''
-
-            fnp_val = target_dict.get('FNP', '')
-            if fnp_val == 'N':
-                fnp_val = ''
-
+        for target_dict in targets_data:
             target = TargetProfile(
-                Name=target_dict.get('Name', key),
-                Pts=safe_int(target_dict.get('Pts'), 0),
-                T=safe_int(target_dict.get('T'), 4),
-                W=safe_int(target_dict.get('W'), 1),
+                Name=target_dict.get('Name', ''),
+                Pts=int(target_dict.get('Pts', 0)),
+                T=int(target_dict.get('T', 4)),
+                W=int(target_dict.get('W', 1)),
                 Sv=str(target_dict.get('Sv', '4+')),
-                Inv=str(inv_val),
-                FNP=str(fnp_val),
+                Inv=str(target_dict.get('Inv', '')),
+                FNP=str(target_dict.get('FNP', '')),
                 Stealth=str(target_dict.get('Stealth', 'N')),
-                UnitSize=safe_int(target_dict.get('UnitSize'), 1)
+                UnitSize=int(target_dict.get('UnitSize', 1))
             )
             targets.append(target)
 
@@ -102,15 +84,11 @@ async def load_target_list_by_name(filename: str):
 async def save_target_list_endpoint(request: SaveTargetListRequest):
     """Save a target list to disk"""
     try:
-        # Convert TargetProfile models to dictionary format expected by target_manager
-        targets_dict = {}
-        for i, target in enumerate(request.targets):
-            # Create a key from the name or use an index
-            key = target.Name.upper().replace(' ', '_')[:10] or f"TARGET_{i}"
-            targets_dict[key] = target.model_dump()
+        # Convert TargetProfile models to list of dicts
+        target_dicts = [t.model_dump() for t in request.targets]
 
         # Save using existing target_manager
-        save_target_list(request.filename, targets_dict, overwrite=True)
+        save_target_list(target_dicts, request.filename)
 
         return {
             "status": "success",
@@ -128,13 +106,7 @@ async def save_target_list_endpoint(request: SaveTargetListRequest):
 async def delete_target_list_endpoint(filename: str):
     """Delete a target list file"""
     try:
-        result = delete_target_list(filename)
-        if not result:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Cannot delete target list '{filename}' (may be readonly or default)"
-            )
-
+        delete_target_list(filename)
         return {
             "status": "success",
             "message": f"Target list '{filename}' deleted"

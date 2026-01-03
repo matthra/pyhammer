@@ -9,7 +9,7 @@ import styles from './RosterManager.module.css'
 
 function RosterManager() {
   const queryClient = useQueryClient()
-  const { roster, rosterFilename, setRoster, setRosterFilename, addWeapon, deleteWeapon, deleteUnit, updateUnitAttributes } = useStore()
+  const { roster, rosterFilename, setRoster, setRosterFilename, addWeapon, deleteUnit } = useStore()
   const [selectedUnitId, setSelectedUnitId] = useState(null)
   const [showNewUnitForm, setShowNewUnitForm] = useState(false)
 
@@ -58,7 +58,6 @@ function RosterManager() {
       Qty: 1,
       Pts: 0,
       Weapon: 'New Weapon',
-      'Loadout Group': '',
       Range: 24,
       A: 1,
       BS: 3,
@@ -72,15 +71,11 @@ function RosterManager() {
       Lethal: 'N',
       Dev: 'N',
       Torrent: 'N',
-      IgnoresCover: 'N',
       CritHit: 6,
       CritWound: 6,
       Sustained: 0,
       FNP: '',
       ProfileID: '',
-      Keywords: '',
-      RR_H: 'N',
-      RR_W: 'N',
     }
     addWeapon(newWeapon)
     setSelectedUnitId(newWeapon.UnitID)
@@ -96,36 +91,6 @@ function RosterManager() {
     if (confirm('Delete this unit and all its weapons?')) {
       deleteUnit(unitId)
     }
-  }
-
-  const handleAddWeapon = (unitId) => {
-    const newWeapon = {
-      Weapon: 'New Weapon',
-      'Loadout Group': '',
-      Range: 24,
-      A: 1,
-      BS: 3,
-      S: 4,
-      AP: 0,
-      D: 1,
-      Blast: 'N',
-      Melta: 0,
-      RapidFire: 0,
-      TwinLinked: 'N',
-      Lethal: 'N',
-      Dev: 'N',
-      Torrent: 'N',
-      IgnoresCover: 'N',
-      CritHit: 6,
-      CritWound: 6,
-      Sustained: 0,
-      FNP: '',
-      ProfileID: '',
-      Keywords: '',
-      RR_H: 'N',
-      RR_W: 'N',
-    }
-    addWeapon(newWeapon, unitId)
   }
 
   // Group weapons by unit
@@ -221,48 +186,11 @@ function RosterManager() {
                 </div>
 
                 {selectedUnitId === unit.id && (
-                  <>
-                    <div className={styles.unitAttributesForm}>
-                      <div className={styles.formField}>
-                        <label>Unit Name</label>
-                        <input
-                          type="text"
-                          value={unit.name}
-                          onChange={(e) => updateUnitAttributes(unit.id, { Name: e.target.value })}
-                        />
-                      </div>
-                      <div className={styles.formField}>
-                        <label>Quantity</label>
-                        <input
-                          type="number"
-                          value={unit.qty}
-                          onChange={(e) => updateUnitAttributes(unit.id, { Qty: parseInt(e.target.value) || 1 })}
-                          min="1"
-                        />
-                      </div>
-                      <div className={styles.formField}>
-                        <label>Points</label>
-                        <input
-                          type="number"
-                          value={unit.pts}
-                          onChange={(e) => updateUnitAttributes(unit.id, { Pts: parseInt(e.target.value) || 0 })}
-                          min="0"
-                        />
-                      </div>
-                    </div>
-                    <div className={styles.weaponsList}>
-                      <div className={styles.weaponsHeader}>
-                        <h5>Weapons</h5>
-                        <button onClick={() => handleAddWeapon(unit.id)} className={styles.btnSecondary}>
-                          <Plus size={16} />
-                          Add Weapon
-                        </button>
-                      </div>
-                      {unit.weapons.map((weapon, idx) => (
-                        <WeaponEditor key={idx} weapon={weapon} unitId={unit.id} weaponIndex={idx} />
-                      ))}
-                    </div>
-                  </>
+                  <div className={styles.weaponsList}>
+                    {unit.weapons.map((weapon, idx) => (
+                      <WeaponEditor key={idx} weapon={weapon} unitId={unit.id} weaponIndex={idx} />
+                    ))}
+                  </div>
                 )}
               </div>
             ))}

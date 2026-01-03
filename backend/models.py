@@ -9,6 +9,12 @@ from enum import Enum
 
 class WeaponProfile(BaseModel):
     """Individual weapon profile"""
+    model_config = {
+        "extra": "allow",
+        "populate_by_name": True,  # Allow both field name and alias
+        "by_alias": True  # Use aliases when serializing
+    }
+
     UnitID: str
     Name: str
     Qty: int
@@ -27,18 +33,23 @@ class WeaponProfile(BaseModel):
     Lethal: str = Field(default="N", pattern="^[YN]$")
     Dev: str = Field(default="N", pattern="^[YN]$")
     Torrent: str = Field(default="N", pattern="^[YN]$")
+    IgnoresCover: str = Field(default="N", pattern="^[YN]$")
     CritHit: int = Field(default=6, ge=2, le=6)
     CritWound: int = Field(default=6, ge=2, le=6)
     Sustained: int = Field(default=0, ge=0, le=6)
     FNP: str = Field(default="")  # "4+", "5+", "6+", or ""
     ProfileID: Optional[str] = None  # For exclusive weapon modes
+    LoadoutGroup: Optional[str] = Field(default="Standard", alias="Loadout Group")  # Loadout grouping
+    Keywords: Optional[str] = Field(default="")  # Unit keywords
+    RR_H: Optional[str] = Field(default="N", pattern="^[YN]$")  # Reroll hits
+    RR_W: Optional[str] = Field(default="N", pattern="^[YN]$")  # Reroll wounds
 
 class TargetProfile(BaseModel):
     """Defensive target profile"""
     Name: str
     Pts: int
     T: int = Field(ge=1, le=14)  # Toughness
-    W: int = Field(ge=1, le=22)  # Wounds
+    W: int = Field(ge=1, le=30)  # Wounds
     Sv: str = Field(pattern=r"^[2-7]\+$")  # Armor save "2+" through "7+"
     Inv: str = Field(default="")  # Invuln save "4+", "5+", "6+", or ""
     FNP: str = Field(default="")  # Feel No Pain

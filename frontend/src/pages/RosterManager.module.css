@@ -119,9 +119,57 @@
   gap: 0.5rem;
 }
 
+.unitAttributesForm {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--bg-tertiary);
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formField label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.formField input {
+  padding: 0.5rem;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.formField input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
 .weaponsList {
   border-top: 1px solid var(--border-color);
   padding-top: 1rem;
+}
+
+.weaponsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.weaponsHeader h5 {
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .empty {

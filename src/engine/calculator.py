@@ -284,6 +284,10 @@ def calculate_group_metrics(df, target_profile, deduplicate=True, assume_half_ra
     if 'Profile ID' not in temp_df.columns: temp_df['Profile ID'] = ''
     temp_df['Profile ID'] = temp_df['Profile ID'].astype(str).replace('nan', '')
 
+    # Ensure UnitID and Loadout Group exist
+    if 'UnitID' not in temp_df.columns: temp_df['UnitID'] = ''
+    if 'Loadout Group' not in temp_df.columns: temp_df['Loadout Group'] = 'Standard'
+
     # --- RANGE-DEPENDENT WEAPONS (Melta, Rapid Fire) ---
     # Duplicate rows for weapons with range-dependent rules
     range_variants = []
@@ -472,25 +476,25 @@ def calculate_group_metrics(df, target_profile, deduplicate=True, assume_half_ra
         work_df = work_df.drop_duplicates(subset=valid_subset)
 
     # Grouping Config
-    group_cols = ['Name', 'Loadout Group']
+    group_cols = ['UnitID', 'Name', 'Loadout Group']
     if 'Qty' in work_df.columns and not deduplicate:
          group_cols.append('Qty')
-    
+
     valid_group_cols = [c for c in group_cols if c in work_df.columns]
-    
+
     # --- POINTS AGGREGATION FIX ---
     # We aggregate Pts using 'max' to avoid double-counting multi-profile units.
     # e.g. Karnivore (Strike) 140pts + Karnivore (Sweep) 140pts -> MAX is 140pts.
-    
+
     agg_funcs = {
-        'final_kills': 'sum', 
+        'final_kills': 'sum',
         'final_damage': 'sum',
         'Pts': 'max',  # <--- CRITICAL FIX: Take MAX cost of the rows in this unit
         'Weapon': lambda x: ", ".join(sorted(set(
             work_df.loc[x.index, 'Weapon'][work_df.loc[x.index, 'Profile ID'] != '']
         )))
     }
-    
+
     grouped = work_df.groupby(valid_group_cols).agg(agg_funcs).reset_index()
 
     results = []
@@ -520,15 +524,17 @@ def calculate_group_metrics(df, target_profile, deduplicate=True, assume_half_ra
         grade = get_cpk_grade(cpk)
 
         results.append({
-            'Unit': row['Name'],
-            'Group': row.get('Loadout Group', 'Standard'),
+            'UnitID': row.get('UnitID', ''),
+            'Name': row['Name'],
+            'Weapon': active_modes,
             'Qty': qty,
-            'CPK': cpk,
-            'Grade': grade,  # Add letter grade
+            'Pts': int(unit_cost),
             'Kills': total_kills,
-            'TTK': ttk,
             'Damage': total_dmg,
-            'Mode': active_modes
+            'CPK': cpk,
+            'TTK': ttk,
+            'CPK_Grade': grade,
+            'Profile ID': None
         })
 
     return results

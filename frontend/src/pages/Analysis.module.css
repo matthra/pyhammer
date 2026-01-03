@@ -23,8 +23,35 @@
   padding: 1.5rem;
   margin-bottom: 2rem;
   display: flex;
-  gap: 2rem;
-  align-items: end;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.selectors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.selector label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.selector select {
+  padding: 0.625rem;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
 }
 
 .controlGroup {
@@ -145,4 +172,296 @@
   background-color: var(--bg-secondary);
   border: 1px dashed var(--border-color);
   border-radius: 8px;
+}
+
+/* Calculate Button */
+.btnCalculate {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+
+.btnCalculate:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+}
+
+.btnCalculate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Grade Legend */
+.legend {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.legend h3 {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.grades {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.gradeItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.gradeColor {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.gradeLabel {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+}
+
+.gradeLabel strong {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.gradeLabel span {
+  color: var(--text-secondary);
+}
+
+.legendNote {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: 0;
+}
+
+/* Threat Matrix */
+.matrixContainer {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  position: relative;
+}
+
+.gridWrapper {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 80vh;
+}
+
+.matrix {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.75rem;
+}
+
+.matrix thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.cornerCell {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  background-color: var(--bg-tertiary);
+  padding: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  border-right: 2px solid var(--border-color);
+  border-bottom: 2px solid var(--border-color);
+  min-width: 150px;
+}
+
+.targetHeader {
+  background-color: var(--bg-tertiary);
+  padding: 0.75rem;
+  text-align: center;
+  border-bottom: 2px solid var(--border-color);
+  min-width: 120px;
+  max-width: 150px;
+}
+
+.targetName {
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.targetStats {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.targetPoints {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.unitCell {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background-color: var(--bg-secondary);
+  padding: 0.75rem;
+  border-right: 2px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  min-width: 150px;
+}
+
+.unitName {
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.unitStats {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.dataCell {
+  padding: 0.5rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: opacity 0.2s;
+  color: white;
+  font-weight: 600;
+}
+
+.dataCell:hover {
+  opacity: 0.85;
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+
+.cpkValue {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.gradeTag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+  display: inline-block;
+  margin-bottom: 0.25rem;
+}
+
+.killsValue {
+  font-size: 0.65rem;
+  opacity: 0.9;
+}
+
+.noData {
+  padding: 0.5rem;
+  text-align: center;
+  color: var(--text-secondary);
+  background-color: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+}
+
+/* Hover Tooltip */
+.tooltip {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background-color: var(--bg-primary);
+  border: 2px solid var(--accent-primary);
+  border-radius: 8px;
+  padding: 1rem;
+  min-width: 300px;
+  max-width: 400px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+.tooltip h4 {
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--accent-primary);
+}
+
+.tooltipItem {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tooltipItem:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.weaponName {
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.tooltipStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.tooltipStats span {
+  display: flex;
+  justify-content: space-between;
+}
+
+.tooltipStats strong {
+  color: var(--text-primary);
+  font-weight: 700;
 }

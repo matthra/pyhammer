@@ -1,13 +1,239 @@
 .manager {
   max-width: 1600px;
   margin: 0 auto;
+  padding: 2rem;
 }
 
-.manager h1 {
+.header {
+  margin-bottom: 2rem;
+}
+
+.header h1 {
   font-size: 2rem;
   margin-bottom: 0.5rem;
 }
 
-.manager p {
+.header p {
   color: var(--text-secondary);
+}
+
+.listControls {
+  background: var(--bg-secondary, #2a2a2a);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.listSelector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 250px;
+}
+
+.listSelector label {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.listDropdown {
+  padding: 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #444);
+  background: var(--bg-primary, #1a1a1a);
+  color: var(--text-primary, #fff);
+  font-size: 1rem;
+}
+
+.filenameInput {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 250px;
+}
+
+.filenameInput label {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.filenameInput input {
+  padding: 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #444);
+  background: var(--bg-primary, #1a1a1a);
+  color: var(--text-primary, #fff);
+  font-size: 1rem;
+}
+
+.listActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.listSummary {
+  background: var(--bg-secondary, #2a2a2a);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.listSummary h3 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.targetSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.75rem;
+}
+
+.targetSummaryCard {
+  background: var(--bg-primary, #1a1a1a);
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  border-left: 3px solid var(--accent-color, #4a9eff);
+}
+
+.targetDetails {
+  background: var(--bg-secondary, #2a2a2a);
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.detailsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.detailsHeader h3 {
+  font-size: 1.2rem;
+}
+
+.targetList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.targetCard {
+  background: var(--bg-primary, #1a1a1a);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.targetCardHeader {
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.targetInfo h4 {
+  margin-bottom: 0.25rem;
+  font-size: 1.1rem;
+}
+
+.targetInfo p {
+  color: var(--text-secondary, #aaa);
+  font-size: 0.9rem;
+}
+
+.targetCardActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.targetEditor {
+  padding: 1.5rem;
+  border-top: 1px solid var(--border-color, #444);
+  background: var(--bg-secondary, #2a2a2a);
+}
+
+.editorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.formGroup label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary, #aaa);
+}
+
+.formGroup input, .formGroup select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #444);
+  background: var(--bg-primary, #1a1a1a);
+  color: var(--text-primary, #fff);
+  font-size: 0.95rem;
+}
+
+.btnPrimary, .btnSecondary, .btnSuccess, .btnDanger {
+  padding: 0.6rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s;
+}
+
+.btnPrimary {
+  background: var(--accent-color, #4a9eff);
+  color: white;
+}
+
+.btnSecondary {
+  background: var(--bg-tertiary, #3a3a3a);
+  color: var(--text-primary, #fff);
+}
+
+.btnSuccess {
+  background: var(--success-color, #4caf50);
+  color: white;
+}
+
+.btnDanger {
+  background: var(--danger-color, #f44336);
+  color: white;
+}
+
+.btnPrimary:hover, .btnSecondary:hover, .btnSuccess:hover, .btnDanger:hover {
+  opacity: 0.85;
+}
+
+.btnPrimary:disabled, .btnSecondary:disabled, .btnSuccess:disabled, .btnDanger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.empty {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-secondary, #aaa);
 }
