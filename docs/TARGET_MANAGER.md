@@ -30,6 +30,11 @@ Build a list based on what you actually face:
 - "Alice's Guard Blob" (T3 5+ 1W, 20 models)
 - "Charlie's Knights" (Custom profiles)
 
+**Save Notation Guide:**
+- `3+` = Armor save
+- `4++` = Invulnerable save
+- `5+++` = Feel No Pain save
+
 ### 3. Specialized Testing
 - **Anti-Horde**: GEQ, Ork Boyz, Gaunts
 - **Anti-Elite**: TEQ, Custodes, Death Guard

@@ -118,6 +118,13 @@ class ChartType(str, Enum):
     TTK_HEATMAP = "ttk_heatmap"
     UNIT_COMPARISON = "unit_comparison"
 
+class MultiTargetRequest(BaseModel):
+    """Request to calculate metrics against multiple targets"""
+    weapons: List[WeaponProfile]
+    targets: List[TargetProfile]
+    assume_cover: bool = False
+    assume_half_range: bool = False
+
 class ChartRequest(BaseModel):
     """Request to generate a chart"""
     chart_type: ChartType

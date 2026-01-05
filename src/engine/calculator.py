@@ -189,7 +189,20 @@ def resolve_single_row(row, defender, assume_half_range=False):
     # 4. Save Phase
     sv = safe_int(defender.get('Sv'), default=7)
     inv = safe_int(defender.get('Inv'), default=0)
-    
+
+    # Apply cover modifier per-weapon
+    # Cover improves armor save by 1 (but not invuln) unless weapon ignores cover or is melee
+    assume_cover = row.get('__assume_cover__', False)
+    if assume_cover:
+        ignores_cover = str(row.get('IgnoresCover', 'N')).upper() == 'Y'
+        is_melee = str(row.get('Range', '')).upper() == 'M'
+
+        if not ignores_cover and not is_melee and sv > 2:
+            # Improve armor save by 1 (lower number = better save)
+            sv = sv - 1
+            # DEBUG: Uncomment to see per-weapon cover application
+            # print(f"  Applied cover to {row.get('Weapon')}: save improved to {sv}+")
+
     modified_sv = sv - ap
     final_save = modified_sv
     if inv > 0:
@@ -322,103 +335,100 @@ def calculate_group_metrics(df, target_profile, deduplicate=True, assume_half_ra
             else:
                 profile_id_to_use = original_profile_id
 
-            # If assume_half_range is enabled, only create close variant
+            # Create appropriate variant based on assume_half_range setting
             if not assume_half_range:
-                # Create FAR variant (no bonuses)
+                # Create FAR variant (no bonuses) - weapons NOT at half range
                 far_row = row.copy()
-                far_row['Weapon'] = f"{row['Weapon']} (far)"
+                far_row['Weapon'] = row['Weapon']
                 far_row['Profile ID'] = profile_id_to_use
-                # Clear the Melta/RapidFire flags on far variant to prevent recursion
+                # Clear the Melta/RapidFire flags to prevent recursion
                 far_row['Melta'] = 'N'
                 far_row['RapidFire'] = 'N'
                 range_variants.append(far_row)
-
-            # Create CLOSE variant (with bonuses)
-            close_row = row.copy()
-            if assume_half_range:
-                # Don't add suffix if we're assuming half range globally
-                close_row['Weapon'] = row['Weapon']
+                rows_to_remove.append(idx)
             else:
-                close_row['Weapon'] = f"{row['Weapon']} (close)"
-            close_row['Profile ID'] = profile_id_to_use
-            # Clear the flags on close variant too to prevent recursion
-            close_row['Melta'] = 'N'
-            close_row['RapidFire'] = 'N'
+                # Create CLOSE variant (with bonuses) - weapons AT half range
+                close_row = row.copy()
+                close_row['Weapon'] = row['Weapon']
+                close_row['Profile ID'] = profile_id_to_use
+                # Clear the flags to prevent recursion
+                close_row['Melta'] = 'N'
+                close_row['RapidFire'] = 'N'
 
-            # Apply Rapid Fire bonus: Add extra attacks at half range
-            if has_rapid_fire:
-                current_attacks = str(close_row.get('A', '1'))
-
-                if rapid_fire_bonus is None:
-                    # Legacy 'Y' mode: double attacks
-                    if 'D6' in current_attacks.upper():
-                        # Handle dice notation
-                        if '+' in current_attacks:
-                            parts = current_attacks.split('+')
+                # Apply Rapid Fire bonus: Add extra attacks at half range
+                if has_rapid_fire:
+                    current_attacks = str(close_row.get('A', '1'))
+    
+                    if rapid_fire_bonus is None:
+                        # Legacy 'Y' mode: double attacks
+                        if 'D6' in current_attacks.upper():
+                            # Handle dice notation
+                            if '+' in current_attacks:
+                                parts = current_attacks.split('+')
+                                dice_part = parts[0].upper()
+                                flat = int(parts[1])
+                                if dice_part == 'D6':
+                                    close_row['A'] = f'2D6+{flat * 2}'
+                                elif dice_part.endswith('D6'):
+                                    num = int(dice_part.replace('D6', ''))
+                                    close_row['A'] = f'{num * 2}D6+{flat * 2}'
+                            else:
+                                if current_attacks.upper() == 'D6':
+                                    close_row['A'] = '2D6'
+                                elif current_attacks.upper().endswith('D6'):
+                                    num = int(current_attacks.upper().replace('D6', ''))
+                                    close_row['A'] = f'{num * 2}D6'
+                        else:
+                            # Fixed attacks - just double
+                            try:
+                                attacks = int(current_attacks)
+                                close_row['A'] = str(attacks * 2)
+                            except:
+                                close_row['A'] = current_attacks
+                    else:
+                        # New numeric mode: add specific bonus attacks
+                        if 'D6' in current_attacks.upper():
+                            # Handle dice notation
+                            if '+' in current_attacks:
+                                parts = current_attacks.split('+')
+                                dice_part = parts[0].upper()
+                                flat = int(parts[1])
+                                close_row['A'] = f'{dice_part}+{flat + rapid_fire_bonus}'
+                            else:
+                                # Just dice, add flat bonus
+                                close_row['A'] = f'{current_attacks}+{rapid_fire_bonus}'
+                        else:
+                            # Fixed attacks - add bonus
+                            try:
+                                attacks = int(current_attacks)
+                                close_row['A'] = str(attacks + rapid_fire_bonus)
+                            except:
+                                close_row['A'] = f'{current_attacks}+{rapid_fire_bonus}'
+    
+                # Apply Melta bonus: Add X flat damage at half range
+                if has_melta:
+                    current_damage = str(close_row.get('D', '1'))
+                    # Add flat damage (where melta_damage = flat damage to add)
+                    if 'D6' in current_damage.upper():
+                        if '+' in current_damage:
+                            parts = current_damage.split('+')
                             dice_part = parts[0].upper()
                             flat = int(parts[1])
-                            if dice_part == 'D6':
-                                close_row['A'] = f'2D6+{flat * 2}'
-                            elif dice_part.endswith('D6'):
-                                num = int(dice_part.replace('D6', ''))
-                                close_row['A'] = f'{num * 2}D6+{flat * 2}'
+                            # Add melta_damage to the flat portion
+                            close_row['D'] = f'{dice_part}+{flat + melta_damage}'
                         else:
-                            if current_attacks.upper() == 'D6':
-                                close_row['A'] = '2D6'
-                            elif current_attacks.upper().endswith('D6'):
-                                num = int(current_attacks.upper().replace('D6', ''))
-                                close_row['A'] = f'{num * 2}D6'
+                            # Just dice, add flat damage
+                            close_row['D'] = f'{current_damage}+{melta_damage}'
                     else:
-                        # Fixed attacks - just double
+                        # Fixed damage - add flat melta damage
                         try:
-                            attacks = int(current_attacks)
-                            close_row['A'] = str(attacks * 2)
+                            dmg = int(current_damage)
+                            close_row['D'] = str(dmg + melta_damage)
                         except:
-                            close_row['A'] = current_attacks
-                else:
-                    # New numeric mode: add specific bonus attacks
-                    if 'D6' in current_attacks.upper():
-                        # Handle dice notation
-                        if '+' in current_attacks:
-                            parts = current_attacks.split('+')
-                            dice_part = parts[0].upper()
-                            flat = int(parts[1])
-                            close_row['A'] = f'{dice_part}+{flat + rapid_fire_bonus}'
-                        else:
-                            # Just dice, add flat bonus
-                            close_row['A'] = f'{current_attacks}+{rapid_fire_bonus}'
-                    else:
-                        # Fixed attacks - add bonus
-                        try:
-                            attacks = int(current_attacks)
-                            close_row['A'] = str(attacks + rapid_fire_bonus)
-                        except:
-                            close_row['A'] = f'{current_attacks}+{rapid_fire_bonus}'
-
-            # Apply Melta bonus: Add X flat damage at half range
-            if has_melta:
-                current_damage = str(close_row.get('D', '1'))
-                # Add flat damage (where melta_damage = flat damage to add)
-                if 'D6' in current_damage.upper():
-                    if '+' in current_damage:
-                        parts = current_damage.split('+')
-                        dice_part = parts[0].upper()
-                        flat = int(parts[1])
-                        # Add melta_damage to the flat portion
-                        close_row['D'] = f'{dice_part}+{flat + melta_damage}'
-                    else:
-                        # Just dice, add flat damage
-                        close_row['D'] = f'{current_damage}+{melta_damage}'
-                else:
-                    # Fixed damage - add flat melta damage
-                    try:
-                        dmg = int(current_damage)
-                        close_row['D'] = str(dmg + melta_damage)
-                    except:
-                        close_row['D'] = f'{current_damage}+{melta_damage}'
-
-            range_variants.append(close_row)
-            rows_to_remove.append(idx)
+                            close_row['D'] = f'{current_damage}+{melta_damage}'
+    
+                range_variants.append(close_row)
+                rows_to_remove.append(idx)
 
     # Remove original rows that were split
     if rows_to_remove:

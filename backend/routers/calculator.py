@@ -18,7 +18,8 @@ from ..models import (
     CalculateResponse,
     MetricResult,
     WeaponProfile,
-    TargetProfile
+    TargetProfile,
+    MultiTargetRequest
 )
 
 router = APIRouter()
@@ -58,13 +59,9 @@ async def calculate_metrics(request: CalculateRequest):
         # Convert target to dict
         target_dict = target_to_dict(request.target)
 
-        # Apply cover modifier if requested
-        if request.assume_cover and target_dict.get('Sv'):
-            # Convert "3+" to 2+, "4+" to 3+, etc.
-            current_save = int(target_dict['Sv'].replace('+', ''))
-            if current_save > 2:  # Can't improve past 2+
-                improved_save = current_save - 1
-                target_dict['Sv'] = f"{improved_save}+"
+        # Store cover setting in DataFrame for per-weapon handling
+        # We'll handle cover application in the calculator per-weapon
+        df['__assume_cover__'] = request.assume_cover
 
         # Call existing calculator function
         metrics_list = calculate_group_metrics(
@@ -115,33 +112,36 @@ async def calculate_metrics(request: CalculateRequest):
         )
 
 @router.post("/calculate-multi-target")
-async def calculate_multi_target(
-    weapons: List[WeaponProfile],
-    targets: List[TargetProfile],
-    assume_cover: bool = False,
-    assume_half_range: bool = False
-):
+async def calculate_multi_target(request: MultiTargetRequest):
     """
     Calculate metrics against multiple targets (threat matrix)
 
     Returns a matrix of results for each weapon against each target
     """
+    # DEBUG: Log received parameters
+    print(f"=== CALCULATE MULTI TARGET DEBUG ===")
+    print(f"assume_cover: {request.assume_cover}")
+    print(f"assume_half_range: {request.assume_half_range}")
+    print(f"num_weapons: {len(request.weapons)}")
+    print(f"num_targets: {len(request.targets)}")
+    print(f"====================================")
+
     try:
         results = {}
 
-        for target in targets:
-            request = CalculateRequest(
-                weapons=weapons,
+        for target in request.targets:
+            calc_request = CalculateRequest(
+                weapons=request.weapons,
                 target=target,
-                assume_cover=assume_cover,
-                assume_half_range=assume_half_range
+                assume_cover=request.assume_cover,
+                assume_half_range=request.assume_half_range
             )
 
-            response = await calculate_metrics(request)
+            response = await calculate_metrics(calc_request)
             results[target.Name] = response.model_dump()
 
         return {
-            "targets": [t.Name for t in targets],
+            "targets": [t.Name for t in request.targets],
             "results": results
         }
 

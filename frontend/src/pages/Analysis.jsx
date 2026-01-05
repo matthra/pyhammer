@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { calculator, targets, rosters } from '../api/client'
 import useStore from '../store/useStore'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
 import { RefreshCw } from 'lucide-react'
 import styles from './Analysis.module.css'
@@ -47,6 +47,7 @@ function Analysis() {
   const [isCalculating, setIsCalculating] = useState(false)
   const [hoveredCell, setHoveredCell] = useState(null)
   const [viewMode, setViewMode] = useState('matrix') // 'matrix' or 'list'
+  const hasLoadedDefaults = useRef(false)
 
   // Load available rosters
   const { data: rosterList } = useQuery({
@@ -59,6 +60,53 @@ function Analysis() {
     queryKey: ['targetLists'],
     queryFn: targets.list,
   })
+
+  // Auto-load default roster and targets on mount
+  useEffect(() => {
+    const loadDefaults = async () => {
+      // Only load defaults once
+      if (hasLoadedDefaults.current) return
+
+      let loaded = false
+
+      // Load default roster if available and nothing is selected yet
+      if (rosterList && rosterList.length > 0 && !selectedRosterFilename && activeRoster.length === 0) {
+        const defaultRoster = rosterList.find(r => r.filename === 'default_roster.json')
+        if (defaultRoster) {
+          try {
+            const data = await rosters.load(defaultRoster.filename)
+            setActiveRoster(data.weapons)
+            setSelectedRosterFilename(defaultRoster.filename)
+            loaded = true
+          } catch (error) {
+            console.error('Failed to load default roster:', error)
+          }
+        }
+      }
+
+      // Load default targets if available and nothing is selected yet
+      if (targetLists && targetLists.length > 0 && !selectedTargetFilename && activeTargets.length === 0) {
+        const defaultTargets = targetLists.find(t => t.filename === 'default.json')
+        if (defaultTargets) {
+          try {
+            const data = await targets.load(defaultTargets.filename)
+            setActiveTargets(data.targets)
+            setSelectedTargetFilename(defaultTargets.filename)
+            loaded = true
+          } catch (error) {
+            console.error('Failed to load default targets:', error)
+          }
+        }
+      }
+
+      // Mark as loaded if we successfully loaded anything
+      if (loaded) {
+        hasLoadedDefaults.current = true
+      }
+    }
+
+    loadDefaults()
+  }, [rosterList, targetLists, selectedRosterFilename, selectedTargetFilename, activeRoster.length, activeTargets.length])
 
   // Handle roster selection
   const handleRosterChange = async (filename) => {
@@ -106,6 +154,12 @@ function Analysis() {
       toast.error('No targets loaded')
       return
     }
+
+    // DEBUG: Log the checkbox states being used
+    console.log('=== CALCULATE MATRIX DEBUG ===')
+    console.log('assumeCover:', assumeCover)
+    console.log('assumeHalfRange:', assumeHalfRange)
+    console.log('==============================')
 
     setIsCalculating(true)
     try {
@@ -256,8 +310,8 @@ function Analysis() {
                       <div className={styles.targetName}>{target.Name}</div>
                       <div className={styles.targetStats}>
                         T{target.T} W{target.W} {target.Sv}
-                        {target.Inv && ` ${target.Inv}++`}
-                        {target.FNP && ` FNP${target.FNP}`}
+                        {target.Inv && ` ${target.Inv.replace('+', '')}++`}
+                        {target.FNP && ` ${target.FNP.replace('+', '')}+++`}
                       </div>
                       <div className={styles.targetPoints}>{target.Pts}pts</div>
                     </th>
