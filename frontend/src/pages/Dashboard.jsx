@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { calculator } from '../api/client'
 import useStore from '../store/useStore'
+import ThemeSwitcher from '../components/ThemeSwitcher'
 import styles from './Dashboard.module.css'
 
 function Dashboard() {
@@ -23,8 +24,13 @@ function Dashboard() {
   return (
     <div className={styles.dashboard}>
       <div className={styles.header}>
-        <h1>PyHammer Dashboard</h1>
-        <p>Warhammer 40K Mathematical Analysis Tool</p>
+        <div>
+          <h1>PyHammer Dashboard</h1>
+          <p>Warhammer 40K Mathematical Analysis Tool</p>
+        </div>
+        <div className={styles.themeSwitcherContainer}>
+          <ThemeSwitcher variant="dropdown" />
+        </div>
       </div>
 
       <div className={styles.stats}>

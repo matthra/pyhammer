@@ -5,6 +5,10 @@
 
 .header {
   margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
 }
 
 .header h1 {
@@ -16,6 +20,10 @@
 .header p {
   color: var(--text-secondary);
   font-size: 1.125rem;
+}
+
+.themeSwitcherContainer {
+  flex-shrink: 0;
 }
 
 .stats {

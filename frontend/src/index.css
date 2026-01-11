@@ -1,37 +1,154 @@
+@import "tailwindcss";
+
+/* ===================================
+   TAILWIND THEME CONFIGURATION
+   Configure Tailwind to use our CSS variables
+   =================================== */
+@theme {
+  /* Color configuration using CSS variables */
+  --color-bg-primary: rgb(var(--bg-primary) / <alpha-value>);
+  --color-bg-secondary: rgb(var(--bg-secondary) / <alpha-value>);
+  --color-bg-tertiary: rgb(var(--bg-tertiary) / <alpha-value>);
+  --color-bg-hover: rgb(var(--bg-hover) / <alpha-value>);
+
+  --color-text-primary: rgb(var(--text-primary) / <alpha-value>);
+  --color-text-secondary: rgb(var(--text-secondary) / <alpha-value>);
+  --color-text-tertiary: rgb(var(--text-tertiary) / <alpha-value>);
+
+  --color-border: rgb(var(--border-color) / <alpha-value>);
+  --color-border-light: rgb(var(--border-light) / <alpha-value>);
+  --color-border-dark: rgb(var(--border-dark) / <alpha-value>);
+
+  --color-accent-primary: rgb(var(--accent-primary) / <alpha-value>);
+  --color-accent-secondary: rgb(var(--accent-secondary) / <alpha-value>);
+  --color-accent-hover: rgb(var(--accent-hover) / <alpha-value>);
+
+  --color-success: rgb(var(--success) / <alpha-value>);
+  --color-warning: rgb(var(--warning) / <alpha-value>);
+  --color-danger: rgb(var(--danger) / <alpha-value>);
+  --color-info: rgb(var(--info) / <alpha-value>);
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* ===================================
+   CSS VARIABLES THEME SYSTEM
+   Content creators: modify these values to customize the entire app
+   =================================== */
+
 :root {
-  --bg-primary: #0f1419;
-  --bg-secondary: #1a1f2e;
-  --bg-tertiary: #252b3b;
-  --text-primary: #e6edf3;
-  --text-secondary: #8b949e;
-  --border-color: #30363d;
-  --accent-primary: #58a6ff;
-  --accent-hover: #1f6feb;
-  --success: #3fb950;
-  --warning: #d29922;
-  --danger: #f85149;
+  /* ===================================
+     COLOR PALETTE (RGB format for Tailwind alpha support)
+     Convert hex to RGB: #0f1419 -> 15, 20, 25
+     =================================== */
+
+  /* Background Colors */
+  --bg-primary: 15 20 25;           /* #0f1419 - Main background */
+  --bg-secondary: 26 31 46;         /* #1a1f2e - Cards, panels */
+  --bg-tertiary: 37 43 59;          /* #252b3b - Elevated elements */
+  --bg-hover: 48 54 71;             /* Hover state for interactive elements */
+
+  /* Text Colors */
+  --text-primary: 230 237 243;      /* #e6edf3 - Primary text */
+  --text-secondary: 139 148 158;    /* #8b949e - Secondary text */
+  --text-tertiary: 107 114 128;     /* Muted text */
+
+  /* Border Colors */
+  --border-color: 48 54 61;         /* #30363d - Default borders */
+  --border-light: 58 64 71;         /* Lighter borders */
+  --border-dark: 38 44 51;          /* Darker borders */
+
+  /* Accent Colors */
+  --accent-primary: 88 166 255;     /* #58a6ff - Primary brand color */
+  --accent-secondary: 139 92 246;   /* #8b5cf6 - Secondary accent */
+  --accent-hover: 31 111 235;       /* #1f6feb - Hover state */
+
+  /* Status Colors */
+  --success: 63 185 80;             /* #3fb950 - Success states */
+  --warning: 210 153 34;            /* #d29922 - Warning states */
+  --danger: 248 81 73;              /* #f85149 - Error/danger states */
+  --info: 56 139 253;               /* #388bfd - Info states */
+
+  /* ===================================
+     SPACING SYSTEM
+     =================================== */
+  --spacing-section: 2rem;          /* Large section spacing */
+  --spacing-card: 1.5rem;           /* Card padding */
+  --spacing-element: 1rem;          /* General element spacing */
+
+  /* ===================================
+     BORDER RADIUS
+     =================================== */
+  --radius-sm: 0.25rem;             /* 4px */
+  --radius-md: 0.5rem;              /* 8px */
+  --radius-lg: 0.75rem;             /* 12px */
+  --radius-xl: 1rem;                /* 16px */
+
+  /* ===================================
+     TYPOGRAPHY
+     =================================== */
+  --font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-family-mono: 'Source Code Pro', Menlo, Monaco, Consolas, 'Courier New', monospace;
+
+  /* Font Sizes */
+  --font-size-xs: 0.75rem;          /* 12px */
+  --font-size-sm: 0.875rem;         /* 14px */
+  --font-size-base: 1rem;           /* 16px */
+  --font-size-lg: 1.125rem;         /* 18px */
+  --font-size-xl: 1.25rem;          /* 20px */
+  --font-size-2xl: 1.5rem;          /* 24px */
+  --font-size-3xl: 1.875rem;        /* 30px */
+
+  /* Line Heights */
+  --line-height-xs: 1.25;
+  --line-height-sm: 1.375;
+  --line-height-base: 1.5;
+  --line-height-lg: 1.625;
+  --line-height-xl: 1.75;
+  --line-height-2xl: 1.875;
+  --line-height-3xl: 2;
+
+  /* Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ===================================
+     SHADOWS
+     =================================== */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+
+  /* ===================================
+     TRANSITIONS
+     =================================== */
+  --transition-duration: 150ms;
+  --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ===================================
+   BASE STYLES
+   =================================== */
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-family-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  line-height: 1.6;
+  background-color: rgb(var(--bg-primary));
+  color: rgb(var(--text-primary));
+  line-height: var(--line-height-base);
+  font-size: var(--font-size-base);
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: var(--font-family-mono);
 }
 
 button {
@@ -43,21 +160,245 @@ input, select, textarea {
   font-family: inherit;
 }
 
-/* Scrollbar styling */
+/* Global select/option styling for better contrast and visibility */
+select {
+  background-color: rgb(var(--bg-primary));
+  color: rgb(var(--text-primary));
+  border: 3px solid #6b7280;  /* Much brighter gray - rgb(107 114 128) */
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.75rem;
+  font-size: var(--font-size-base);
+  transition: all var(--transition-duration) var(--transition-timing);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+select:hover {
+  border-color: rgb(var(--accent-primary));
+  background-color: rgb(var(--bg-tertiary));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+select:focus {
+  outline: none;
+  border-color: rgb(var(--accent-primary));
+  background-color: rgb(var(--bg-tertiary));
+  box-shadow: 0 0 0 4px rgb(var(--accent-primary) / 0.3), 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+select option {
+  background-color: rgb(var(--bg-secondary));
+  color: rgb(var(--text-primary));
+  padding: 0.5rem;
+}
+
+/* ===================================
+   SCROLLBAR STYLING
+   =================================== */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: rgb(var(--bg-secondary));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
-  border-radius: 5px;
+  background: rgb(var(--bg-tertiary));
+  border-radius: var(--radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-color);
+  background: rgb(var(--border-color));
+}
+
+/* ===================================
+   CUSTOM COMPONENT CLASSES
+   Using regular CSS with CSS variables
+   =================================== */
+
+/* Button Variants */
+.btn-primary {
+  background-color: rgb(var(--accent-primary));
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  border: none;
+  transition: background-color var(--transition-duration) var(--transition-timing);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: rgb(var(--accent-hover));
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: rgb(var(--bg-tertiary));
+  color: rgb(var(--text-primary));
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  border: 1px solid rgb(var(--border-color));
+  transition: background-color var(--transition-duration) var(--transition-timing);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: rgb(var(--bg-hover));
+}
+
+.btn-danger {
+  background-color: rgb(var(--danger));
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  border: none;
+  transition: background-color var(--transition-duration) var(--transition-timing);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: rgb(var(--danger) / 0.9);
+}
+
+.btn-success {
+  background-color: rgb(var(--success));
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  border: none;
+  transition: background-color var(--transition-duration) var(--transition-timing);
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: rgb(var(--success) / 0.9);
+}
+
+/* Card Components */
+.card {
+  background-color: rgb(var(--bg-secondary));
+  border-radius: var(--radius-lg);
+  border: 1px solid rgb(var(--border-color));
+  box-shadow: var(--shadow-md);
+}
+
+.card-elevated {
+  background-color: rgb(var(--bg-tertiary));
+  border-radius: var(--radius-lg);
+  border: 1px solid rgb(var(--border-light));
+  box-shadow: var(--shadow-lg);
+}
+
+/* Input Styles */
+.input {
+  background-color: rgb(var(--bg-tertiary));
+  border: 2px solid rgb(var(--border-color));
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.75rem;
+  color: rgb(var(--text-primary));
+  transition: all var(--transition-duration) var(--transition-timing);
+  font-size: var(--font-size-base);
+}
+
+.input::placeholder {
+  color: rgb(var(--text-tertiary));
+}
+
+.input:hover {
+  border-color: rgb(var(--border-light));
+}
+
+.input:focus {
+  outline: none;
+  border-color: rgb(var(--accent-primary));
+  box-shadow: 0 0 0 3px rgb(var(--accent-primary) / 0.2);
+}
+
+.input-error {
+  border-color: rgb(var(--danger));
+}
+
+.input-error:focus {
+  box-shadow: 0 0 0 2px rgb(var(--danger) / 0.5);
+}
+
+/* Select Styles */
+.select {
+  background-color: rgb(var(--bg-primary));
+  border: 3px solid #6b7280;  /* Much brighter gray - rgb(107 114 128) */
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.75rem;
+  color: rgb(var(--text-primary));
+  cursor: pointer;
+  transition: all var(--transition-duration) var(--transition-timing);
+  font-size: var(--font-size-base);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.select:hover {
+  border-color: rgb(var(--accent-primary));
+  background-color: rgb(var(--bg-tertiary));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.select:focus {
+  outline: none;
+  border-color: rgb(var(--accent-primary));
+  background-color: rgb(var(--bg-tertiary));
+  box-shadow: 0 0 0 4px rgb(var(--accent-primary) / 0.3), 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.select option {
+  background-color: rgb(var(--bg-secondary));
+  color: rgb(var(--text-primary));
+  padding: 0.5rem;
+}
+
+/* Label Styles */
+.label {
+  color: rgb(var(--text-secondary));
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+/* Badge Components */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+.badge-success {
+  background-color: rgb(var(--success) / 0.2);
+  color: rgb(var(--success));
+  border: 1px solid rgb(var(--success) / 0.3);
+}
+
+.badge-warning {
+  background-color: rgb(var(--warning) / 0.2);
+  color: rgb(var(--warning));
+  border: 1px solid rgb(var(--warning) / 0.3);
+}
+
+.badge-danger {
+  background-color: rgb(var(--danger) / 0.2);
+  color: rgb(var(--danger));
+  border: 1px solid rgb(var(--danger) / 0.3);
+}
+
+.badge-info {
+  background-color: rgb(var(--info) / 0.2);
+  color: rgb(var(--info));
+  border: 1px solid rgb(var(--info) / 0.3);
 }
